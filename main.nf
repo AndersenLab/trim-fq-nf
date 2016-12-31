@@ -16,6 +16,8 @@ process make_out_dir {
 
     """
     mkdir -p ${params.out}
+    cp ${params.directory}.description ${params.out}.description
+    cp ${params.directory}.fqdata ${params.out}.fqdata
     """
 }
 
@@ -35,17 +37,6 @@ process trim {
     trimmomatic PE -threads ${params.threads} $forward $reverse -baseout ${dataset_id}.fq.gz ILLUMINACLIP:/home/dec211/.linuxbrew/share/trimmomatic/adapters/NexteraPE-PE.fa:2:80:10 MINLEN:45
     rm ${dataset_id}_1U.fq.gz
     rm ${dataset_id}_2U.fq.gz
-    """
-
-}
-
-process copy_fq_files {
-
-    executor 'local'
-
-    """
-    cp ${params.directory}.description ${params.out}.description
-    cp ${params.directory}.fqdata ${params.out}.fqdata
     """
 
 }
