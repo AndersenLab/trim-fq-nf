@@ -16,8 +16,6 @@ process make_out_dir {
 
     """
     mkdir -p ${params.out}
-    cp ${params.directory}.description ${params.out}.description
-    cp ${params.directory}.fqdata ${params.out}.fqdata
     """
 }
 
