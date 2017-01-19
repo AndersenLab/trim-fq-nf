@@ -6,9 +6,22 @@ println params.out
 params.threads = 8
 println "Running Trimmomatic on " + params.directory
 println params.directory + '*_R{1,2}_.*.fastq.gz'
-Channel.fromFilePairs(params.directory + '*_R{1,2}_001.fastq.gz', flat: true)
-        .into { trimmomatic_read_pairs }
 
+// Fetch fqs; alternative suffixes
+Channel.fromFilePairs(params.directory + '*_R{1,2}_001.fastq.gz', flat: true)
+        .into { fastq_suffix }
+
+Channel.fromFilePairs(params.directory + '*_R{1,2}_1.fastq.gz', flat: true)
+        .into { fastq_suffix2 }
+
+Channel.fromFilePairs(params.directory + '*_R{1,2}_001.fq.gz', flat: true)
+        .into { fq_suffix }
+
+Channel.fromFilePairs(params.directory + '*_R{1,2}_1.fq.gz', flat: true)
+        .into { fq_suffix2 }
+
+// Round up fastq pairs
+fastq_suffix.concat( fastq_suffix2, fq_suffix, fq_suffix2 ).into { trimmomatic_read_pairs }
 
 process make_out_dir {
     
