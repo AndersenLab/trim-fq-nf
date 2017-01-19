@@ -5,10 +5,10 @@ params.out = params.directory.replace("raw", "processed")
 println params.out
 params.threads = 8
 println "Running Trimmomatic on " + params.directory
-println params.directory + '*_R{1,2}_.*.fastq.gz'
+println params.directory + '*_{1,2}.fq.gz'
 
 // Fetch fqs; alternative suffixes
-Channel.fromFilePairs(params.directory + '*1.fq.gz', flat: true)
+Channel.fromFilePairs(params.directory + '*_{1,2}.fq.gz', flat: true)
         .into { trimmomatic_read_pairs; log_fq }
         
 log_fq.subscribe { println it }
