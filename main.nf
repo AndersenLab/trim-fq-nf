@@ -13,9 +13,6 @@ Channel.fromFilePairs(params.directory + '*1.fq.gz', flat: true)
         
 log_fq.subscribe { println it }
 
-// Round up fastq pairs
-fastq_suffix.concat( fastq_suffix2, fq_suffix, fq_suffix2 ).into { trimmomatic_read_pairs }
-
 process make_out_dir {
     
     executor 'local'
