@@ -42,12 +42,3 @@ process trim {
 
 }
 
-process perform_fq_profile {
-    input:
-        set f1, f2 from trim_output
-
-    """
-    fq profile --fastqc ${params.out}\$(basename ${f1}) ${params.out}/\$(basename ${f2})
-    """
-}
-
