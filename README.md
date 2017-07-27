@@ -11,3 +11,13 @@ wild isolate sequence data, however - it should not be used on low-coverage sequ
 # cd to directory of fastqs
 nextflow run Andersenlab/trimmomatic-nf
 ```
+
+### .fq.gz
+
+Fastqs should end with `.fq.gz`; To rename fastqs that end in `fastq.gz` use:
+
+```
+rename --dry-run --subst .fastq.gz .fq.gz *.fastq.gz
+```
+
+Verify that the results are correct and remove `dry-run` when appropriate.
