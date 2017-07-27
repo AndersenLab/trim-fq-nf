@@ -1,6 +1,9 @@
-# fq-profile-nf
+# trimmomatic-nf
 
-Perform Fastq-Profiling in the current working directory.
+The trimmomatic workflow should be used to initially process sequence data. In general, it should be used on
+wild isolate sequence data, however - it should not be used on low-coverage sequencing (as used to determine NIL / RIL genotypes). 
+
+`/projects/b1059/data/fastq/WI/dna/raw/<folder_name>`
 
 ### Usage
 
