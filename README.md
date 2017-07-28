@@ -14,10 +14,10 @@ nextflow run Andersenlab/trimmomatic-nf
 
 ### .fq.gz
 
-Fastqs should end with `.fq.gz`; To rename fastqs that end in `fastq.gz` use:
+Fastqs should end with `_1.fq.gz` or `_2.fq.gz`; To rename fastqs use:
 
 ```
-rename --dry-run --subst .fastq.gz .fq.gz *.fastq.gz
+rename --dry-run --subst .fastq.gz .fq.gz --subst _R1_001 _1 --subst _R2_001 *.fastq.gz
 ```
 
 Verify that the results are correct and remove `dry-run` when appropriate.
