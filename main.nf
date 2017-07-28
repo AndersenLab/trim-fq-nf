@@ -30,8 +30,6 @@ process pre_trim_fastqc {
 
     publishDir params.directory + "/fastqc", mode: 'move'
     
-    validExitStatus 0,2
-    
     afterScript "multiqc ${params.directory}/fastqc"
     
     tag { dataset_id } 
@@ -43,7 +41,8 @@ process pre_trim_fastqc {
         set file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip")
         set file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html")
     """
-        fastqc --noextract --threads 8 ${forward} ${reverse}
+        fastqc --noextract --threads 8 ${forward}
+        fastqc --noextract --threads 8 ${reverse}
     """
 }
 
@@ -90,6 +89,7 @@ process post_trim_fastqc {
         set file("${dataset_id}_1P_fastqc.html"), file("${dataset_id}_2P_fastqc.html")
     
     """
-        fastqc --noextract --threads 8 ${dataset_id}_1P.fq.gz ${dataset_id}_2P.fq.gz
+        fastqc --noextract --threads 8 ${dataset_id}_1P.fq.gz
+        fastqc --noextract --threads 8 ${dataset_id}_2P.fq.gz
     """
 }
