@@ -38,8 +38,8 @@ process pre_trim_fastqc {
         set dataset_id, file(forward), file(reverse) from pre_trim_fastqc
     
     output:
-        set file("${forward}_fastqc.zip"), file("${reverse}_fastqc.zip")
-        set file("${forward}_fastqc.html"), file("${reverse}_fastqc.html")
+        set file("${forward}_1_fastqc.zip"), file("${reverse}_1_fastqc.zip")
+        set file("${forward}_2_fastqc.html"), file("${reverse}_2_fastqc.html")
     """
         fastqc --noextract --threads 8 ${forward} ${reverse}
     """
@@ -82,7 +82,8 @@ process post_trim_fastqc {
         set dataset_id, file("${dataset_id}_1P.fq.gz"), file("${dataset_id}_2P.fq.gz") from trim_output
     
     output:
-        set dataset_id, file("${dataset_id}_1P_fastqc.zip"), file("${dataset_id}_2P_fastqc.zip"), file("${dataset_id}_1P_fastqc.html"), file("${dataset_id}_2P_fastqc.html") into post_multiqc
+        set file("${dataset_id}_1P_fastqc.zip"), file("${dataset_id}_2P_fastqc.zip")
+        set file("${dataset_id}_1P_fastqc.html"), file("${dataset_id}_2P_fastqc.html")
     
     """
         fastqc --noextract --threads 8 ${dataset_id}_1P.fq.gz ${dataset_id}_2P.fq.gz
