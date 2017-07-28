@@ -52,7 +52,7 @@ process pre_trim_multi_qc_run {
     output:
         file("multiqc_report.html")
     """
-        multiqc .
+        multiqc ${params.directory}/fastqc
     """
 
 }
@@ -114,7 +114,7 @@ process post_trim_multi_qc_run {
         file("multiqc_report.html")
         
     """
-        multiqc .
+        multiqc ${params.out}/fastqc
     """
 
 }
