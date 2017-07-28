@@ -108,7 +108,7 @@ process post_trim_multi_qc_run {
     publishDir params.out + "/fastqc", mode: 'copy'
 
     input:
-        set dataset_id, file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html") from pre_trim_multi_qc.toSortedList()
+        set dataset_id, file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html") from post_trim_multi_qc.toSortedList()
     
     output:
         file("multiqc_report.html")
