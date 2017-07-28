@@ -16,7 +16,7 @@ log_fq.subscribe { println it }
 process make_out_dir {
     
     executor 'local'
-
+    
     """
     mkdir -p ${params.out}
     """
@@ -31,6 +31,8 @@ process pre_trim_fastqc {
     publishDir params.directory + "/fastqc", mode: 'move'
     
     afterScript "multiqc ${params.directory}/fastqc"
+    
+    tag { dataset } 
     
     input:
         set dataset_id, file(forward), file(reverse) from pre_trim_fastqc
@@ -49,7 +51,9 @@ process trim {
     publishDir params.out, mode: 'move'
 
     cpus 8
-
+    
+    tag { dataset } 
+    
     input:
         set dataset_id, file(forward), file(reverse) from trimmomatic_read_pairs
 
@@ -71,7 +75,9 @@ process post_trim_fastqc {
     afterScript "multiqc ${params.out}/fastqc"
     
     cpus 8
-
+    
+    tag { dataset } 
+    
     input:
         set dataset_id, file("${dataset_id}_1P.fq.gz"), file("${dataset_id}_2P.fq.gz") from trim_output
     
