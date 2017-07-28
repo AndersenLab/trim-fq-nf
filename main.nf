@@ -38,8 +38,8 @@ process pre_trim_fastqc {
         set dataset_id, file(forward), file(reverse) from pre_trim_fastqc
     
     output:
-        set file("${forward}_1_fastqc.zip"), file("${reverse}_1_fastqc.zip")
-        set file("${forward}_2_fastqc.html"), file("${reverse}_2_fastqc.html")
+        set file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip")
+        set file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html")
     """
         fastqc --noextract --threads 8 ${forward} ${reverse}
     """
