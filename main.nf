@@ -28,9 +28,7 @@ process make_out_dir {
 
 process pre_trim_fastqc {
 
-    publishDir params.directory + "/fastqc", mode: 'move'
-    
-    afterScript "multiqc ${params.directory}/fastqc"
+    publishDir params.directory + "/fastqc", mode: 'copy'
     
     tag { dataset_id } 
     
@@ -38,14 +36,26 @@ process pre_trim_fastqc {
         set dataset_id, file(forward), file(reverse) from pre_trim_fastqc
     
     output:
-        set file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip")
-        set file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html")
+        set dataset_id, file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html") into pre_trim_multi_qc
     """
         fastqc --noextract --threads 8 ${forward}
         fastqc --noextract --threads 8 ${reverse}
     """
 }
 
+process pre_trim_multi_qc_run {
+
+    publishDir params.directory + "/fastqc", mode: 'copy'
+
+    input:
+        set dataset_id, file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html") from pre_trim_multi_qc.toSortedList()
+    output:
+        file("multiqc_report.html")
+    """
+        multiqc .
+    """
+
+}
 
 process trim {
 
@@ -71,7 +81,7 @@ process trim {
 
 process post_trim_fastqc {
 
-    publishDir params.out + "/fastqc", mode: 'move'
+    publishDir params.out + "/fastqc", mode: 'copy'
     
     validExitStatus 0,2
     
@@ -85,11 +95,26 @@ process post_trim_fastqc {
         set dataset_id, file("${dataset_id}_1P.fq.gz"), file("${dataset_id}_2P.fq.gz") from trim_output
     
     output:
-        set file("${dataset_id}_1P_fastqc.zip"), file("${dataset_id}_2P_fastqc.zip")
-        set file("${dataset_id}_1P_fastqc.html"), file("${dataset_id}_2P_fastqc.html")
+        set file("${dataset_id}_1P_fastqc.zip"), file("${dataset_id}_2P_fastqc.zip"), file("${dataset_id}_1P_fastqc.html"), file("${dataset_id}_2P_fastqc.html") into post_trim_multi_qc
     
     """
         fastqc --noextract --threads 8 ${dataset_id}_1P.fq.gz
         fastqc --noextract --threads 8 ${dataset_id}_2P.fq.gz
     """
+}
+
+process post_trim_multi_qc_run {
+
+    publishDir params.out + "/fastqc", mode: 'copy'
+
+    input:
+        set dataset_id, file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_1_fastqc.zip"), file("${dataset_id}_2_fastqc.html"), file("${dataset_id}_2_fastqc.html") from pre_trim_multi_qc.toSortedList()
+    
+    output:
+        file("multiqc_report.html")
+        
+    """
+        multiqc .
+    """
+
 }
