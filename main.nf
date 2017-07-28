@@ -32,7 +32,7 @@ process pre_trim_fastqc {
     
     afterScript "multiqc ${params.directory}/fastqc"
     
-    tag { dataset } 
+    tag { dataset_id } 
     
     input:
         set dataset_id, file(forward), file(reverse) from pre_trim_fastqc
@@ -52,7 +52,7 @@ process trim {
 
     cpus 8
     
-    tag { dataset } 
+    tag { dataset_id } 
     
     input:
         set dataset_id, file(forward), file(reverse) from trimmomatic_read_pairs
@@ -76,7 +76,7 @@ process post_trim_fastqc {
     
     cpus 8
     
-    tag { dataset } 
+    tag { dataset_id } 
     
     input:
         set dataset_id, file("${dataset_id}_1P.fq.gz"), file("${dataset_id}_2P.fq.gz") from trim_output
