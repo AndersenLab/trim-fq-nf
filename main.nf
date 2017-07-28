@@ -30,6 +30,8 @@ process pre_trim_fastqc {
 
     publishDir params.directory + "/fastqc", mode: 'move'
     
+    validExitStatus 0,2
+    
     afterScript "multiqc ${params.directory}/fastqc"
     
     tag { dataset_id } 
@@ -71,6 +73,8 @@ process trim {
 process post_trim_fastqc {
 
     publishDir params.out + "/fastqc", mode: 'move'
+    
+    validExitStatus 0,2
     
     afterScript "multiqc ${params.out}/fastqc"
     
