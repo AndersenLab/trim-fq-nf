@@ -85,6 +85,8 @@ process post_trim_fastqc {
 
     publishDir params.out + "/fastqc", mode: 'copy'
     
+    stageInMode 'copy'
+    
     cpus 8
     
     tag { dataset_id } 
@@ -96,8 +98,8 @@ process post_trim_fastqc {
         set file("${dataset_id}_1P_fastqc.zip"), file("${dataset_id}_2P_fastqc.zip"), file("${dataset_id}_1P_fastqc.html"), file("${dataset_id}_2P_fastqc.html") into post_trim_multi_qc
     
     """
-        fastqc --noextract --threads 8 `readlink ${dataset_id}_1P.fq.gz`
-        fastqc --noextract --threads 8 `readlink ${dataset_id}_2P.fq.gz`
+        fastqc --noextract --threads 8 ${dataset_id}_1P.fq.gz
+        fastqc --noextract --threads 8 ${dataset_id}_2P.fq.gz
     """
 }
 
