@@ -32,6 +32,8 @@ process pre_trim_fastqc {
     
     tag { dataset_id } 
     
+    cpus 8
+    
     input:
         set dataset_id, file(forward), file(reverse) from pre_trim_fastqc
     
@@ -59,7 +61,7 @@ process pre_trim_multi_qc_run {
 
 process trim {
 
-    publishDir params.out, mode: 'move'
+    publishDir params.out, mode: 'copy'
 
     cpus 8
     
@@ -82,10 +84,6 @@ process trim {
 process post_trim_fastqc {
 
     publishDir params.out + "/fastqc", mode: 'copy'
-    
-    validExitStatus 0,2
-    
-    afterScript "multiqc ${params.out}/fastqc"
     
     cpus 8
     
