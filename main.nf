@@ -74,7 +74,7 @@ process trim {
         set dataset_id, file("${dataset_id}_1P.fq.gz"), file("${dataset_id}_2P.fq.gz") into trim_output
 
     """
-    trimmomatic PE -threads ${params.threads} $forward $reverse -baseout ${dataset_id}.fq.gz ILLUMINACLIP:/home/dec211/.linuxbrew/share/trimmomatic/adapters/NexteraPE-PE.fa:2:80:10 MINLEN:45
+    trimmomatic PE -threads ${params.threads} $forward $reverse -baseout ${dataset_id}.fq.gz ILLUMINACLIP:/home/\$(whoami)/.linuxbrew/share/trimmomatic/adapters/NexteraPE-PE.fa:2:80:10 MINLEN:45
     rm ${dataset_id}_1U.fq.gz
     rm ${dataset_id}_2U.fq.gz
     """
