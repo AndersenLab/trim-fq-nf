@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-params.directory = "$PWD"
+params.directory = "$PWD/"
 params.out = params.directory.replace("raw", "processed")
 println params.out
 params.threads = 8
