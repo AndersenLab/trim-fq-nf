@@ -23,8 +23,10 @@ process make_out_dir {
     """
 }
 
-/*
-    Perform fastqc prior to trimming
+/* 
+    ======================
+    Perform initial FASTQC
+    ======================
 */
 
 process pre_trim_fastqc {
@@ -46,6 +48,12 @@ process pre_trim_fastqc {
     """
 }
 
+/* 
+    ============================
+    Aggregate pre-FASTQC results
+    ============================
+*/
+
 process pre_trim_multi_qc_run {
 
     publishDir "${params.out}/report", mode: 'copy'
@@ -59,6 +67,12 @@ process pre_trim_multi_qc_run {
     """
 
 }
+
+/* 
+    =======================
+    Generate an MD5sum hash
+    =======================
+*/
 
 process md5sum_pre {
 
@@ -106,6 +120,11 @@ process collect_md5sum {
 
 }
 
+/* 
+    ================
+    Perform trimming
+    ================
+*/
 
 process trim {
 
@@ -128,6 +147,13 @@ process trim {
     """
 
 }
+
+/* 
+    ===========
+    Post FASTQC
+    ===========
+*/
+
 
 process post_trim_fastqc {
 
@@ -166,8 +192,6 @@ process post_trim_multi_qc_run {
     """
 
 }
-
-
 
 
 workflow.onComplete {
