@@ -1,5 +1,6 @@
 #!/usr/bin/env nextflow
 
+params.email = 'dec@u.northwestern.edu'
 params.directory = "$PWD/"
 params.out = params.directory.replace("raw", "processed")
 println params.out
@@ -165,3 +166,43 @@ process post_trim_multi_qc_run {
     """
 
 }
+
+
+
+
+workflow.onComplete {
+
+    user="whoami".execute().text
+
+    summary = """
+
+    Pipeline execution summary
+    ---------------------------
+    Completed at: ${workflow.complete}
+    Duration    : ${workflow.duration}
+    Success     : ${workflow.success}
+    workDir     : ${workflow.workDir}
+    exit status : ${workflow.exitStatus}
+    Error report: ${workflow.errorReport ?: '-'}
+    Git info: $workflow.repository - $workflow.revision [$workflow.commitId]
+    User: ${user}
+    """
+
+    println summary
+
+    // mail summary
+    ['mail', '-s', 'wi-nf', params.email].execute() << summary
+
+    def outlog = new File("${params.out}/report/trimming_log.txt")
+    outlog.newWriter().withWriter {
+        outlog << summary
+        outlog << "\n--------pyenv-------\n"
+        outlog << "pyenv versions".execute().text
+        outlog << "--------ENV--------"
+        outlog << "ENV".execute().text
+        outlog << "--------brew--------"
+        outlog << "brew list".execute().text
+    }
+
+}
+
