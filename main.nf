@@ -226,6 +226,8 @@ workflow.onComplete {
         outlog << "ENV".execute().text
         outlog << "--------brew--------"
         outlog << "brew list".execute().text
+        outlog << "--------R--------"
+        outlog << "Rscript -e 'devtools::session_info()'".execute().text
     }
 
 }
