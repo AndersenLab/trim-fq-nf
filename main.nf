@@ -200,6 +200,8 @@ workflow.onComplete {
         outlog << "pyenv versions".execute().text
         outlog << "--------ENV--------"
         outlog << "ENV".execute().text
+        outlog << "--------brew--------"
+        outlog << "brew list".execute().text
     }
 
 }
