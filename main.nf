@@ -5,15 +5,15 @@
     - Dan Lu <dan.lu@northwestern.edu>
 */
 
+
+nextflow.preview.dsl=2
+
+
 params.fastq_path="/projects/b1059/data/fastq/WI/dna/raw"
 params.trimmed_path="/projects/b1059/data/fastq/WI/dna/processed"
 
 params.fastq_folder="test_data/fastq"
 params.trimmed_folder="${params.fastq_folder}_fastp"
-
-
-Channel.fromFilePairs("${params.fastq_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
-  .into { fq_to_QC ; fq_to_trim }
 
 
 
@@ -32,11 +32,12 @@ process pre_trim_fastqc {
     publishDir "${params.fastq_path}/${params.fastq_folder}/fastqc", mode: 'copy', pattern: "*.html"
 
     input:
-      set val(sampleID), file(fq1), file(fq2) from fq_to_QC
+      tuple sampleID, path(fq1), path(fq2) 
 
     output:
-       file("*.html") into fastqc_html /* note each item in the channel is a file pair */
-       file("*.zip") into fastqc_zip
+    /* note each item in the channel is a file pair */
+       path "*.html" // output to fastqc folder
+       path "*.zip", emit: pre_trim_fastqc_zip // emit for the next process
 
     """
     fastqc $fq1
@@ -53,13 +54,11 @@ process pre_trim_multi_QC {
     publishDir "${params.fastq_path}/${params.fastq_folder}/fastqc", mode: 'copy', pattern: "*.html"
 
     input:
-      file(fastqc_zip) from fastqc_zip.flatten().toSortedList()
+      path(fastqc_zip)
 
     output:
-      file("*.html") into pre_multiQC_report
+      path "*.html"
     
-    script:
-
       """
 
       multiqc .
@@ -82,13 +81,13 @@ process fastp_trim {
 
 
     input:
-      set val(sampleID), file(fq1), file(fq2) from fq_to_trim
+      tuple sampleID, path(fq1), path(fq2) 
 
     output:
-      set file("*_trimmed.fq.gz"), file("*_fastp.json"), file("*_fastp.html") into fq_trimmed
-      file("*_fastp.json") into trim_json
+      path "*_trimmed.fq.gz" 
+      path "*_fastp.json", emit: fastp_json
     
-    script:
+
       """
 
       fastp -i $fq1 -I $fq2 \\
@@ -115,10 +114,10 @@ process multi_QC {
     publishDir "${params.trimmed_path}/${params.trimmed_folder}/multi_QC", mode: 'copy', pattern: "*.html"
 
     input:
-      file(json) from trim_json.toSortedList()
+      path(json) 
 
     output:
-      file("*.html") into multiQC_report
+      path "*.html"
     
     script:
       """
@@ -126,4 +125,22 @@ process multi_QC {
       multiqc .
 
       """
+}
+
+
+
+
+// read input
+fq = Channel.fromFilePairs("${params.fastq_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
+
+
+// run workflow
+workflow { 
+
+fq | (pre_trim_fastqc & fastp_trim)
+
+pre_trim_fastqc.out.pre_trim_fastqc_zip.flatten().toSortedList() | pre_trim_multi_QC
+
+fastp_trim.out.fastp_json.toSortedList() | multi_QC
+
 }
