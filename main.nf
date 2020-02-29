@@ -17,6 +17,22 @@ params.trimmed_folder="${params.fastq_folder}_fastp"
 
 
 
+/* 
+    ==================================================
+    get md5sum for raw files. do all file in 1 process
+    ==================================================
+*/
+
+process pre_trim_md5sum {
+    // this process runs in the data folder, instead of nextflow working dir
+
+    """
+    cd ${params.fastq_path}/${params.fastq_folder}
+    md5sum *.fq.gz > md5.txt
+    """
+}
+
+
 
 /* 
     ==============================================
@@ -67,6 +83,10 @@ process pre_trim_multi_QC {
 }
 
 
+
+
+
+
 /* 
     ==================
     trim raw data
@@ -76,6 +96,7 @@ process pre_trim_multi_QC {
 
 process fastp_trim {
 
+    tag { sampleID }
 
     publishDir "${params.trimmed_path}/${params.trimmed_folder}", mode: 'copy', pattern: "*.fq.gz"
 
@@ -136,6 +157,11 @@ fq = Channel.fromFilePairs("${params.fastq_path}/${params.fastq_folder}/*_{1,2}.
 
 // run workflow
 workflow { 
+
+
+pre_trim_md5sum()  // check sum for all files. 
+// I don't know how to get the .fq out of fq channel (it has sampleID, fq1, fq2), so this process doesn't take input channel and run locally in the data folder.
+
 
 fq | (pre_trim_fastqc & fastp_trim)
 
