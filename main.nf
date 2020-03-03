@@ -101,9 +101,7 @@ fq = Channel.fromFilePairs("${params.fastq_path}/${params.fastq_folder}/*_{1,2}.
 // run workflow
 workflow { 
 
-
 pre_trim_md5sum()  // check sum for all files. 
-// I don't know how to get the .fq out of fq channel (it has sampleID, fq1, fq2), so this process doesn't take input channel and run locally in the data folder.
 
 fq | fastp_trim
 
