@@ -34,58 +34,6 @@ process pre_trim_md5sum {
 
 
 
-/* 
-    ==============================================
-    FASTQC on raw data and combine with MultiQC
-    ==============================================
-*/
-
-
-process pre_trim_fastqc {
-
-    tag { sampleID }
-
-    publishDir "${params.fastq_path}/${params.fastq_folder}/fastqc", mode: 'copy', pattern: "*.html"
-
-    input:
-      tuple sampleID, path(fq1), path(fq2) 
-
-    output:
-    /* note each item in the channel is a file pair */
-       path "*.html" // output to fastqc folder
-       path "*.zip", emit: pre_trim_fastqc_zip // emit for the next process
-
-    """
-    fastqc $fq1
-    fastqc $fq2
-    """
-}
-
-
-
-
-process pre_trim_multi_QC {
-
-
-    publishDir "${params.fastq_path}/${params.fastq_folder}/fastqc", mode: 'copy', pattern: "*.html"
-
-    input:
-      path(fastqc_zip)
-
-    output:
-      path "*.html"
-    
-      """
-
-      multiqc .
-
-      """
-}
-
-
-
-
-
 
 /* 
     ==================
@@ -162,10 +110,7 @@ workflow {
 pre_trim_md5sum()  // check sum for all files. 
 // I don't know how to get the .fq out of fq channel (it has sampleID, fq1, fq2), so this process doesn't take input channel and run locally in the data folder.
 
-
-fq | (pre_trim_fastqc & fastp_trim)
-
-pre_trim_fastqc.out.pre_trim_fastqc_zip.flatten().toSortedList() | pre_trim_multi_QC
+fq | fastp_trim
 
 fastp_trim.out.fastp_json.toSortedList() | multi_QC
 
