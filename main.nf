@@ -11,6 +11,7 @@ nextflow.preview.dsl=2
 
 // See config in config/ folder for parameter default values
 
+println "Running fastp trimming on ${params.fastq_path}/${params.fastq_folder}"
 
 /* 
     ==================================================
@@ -32,7 +33,7 @@ process pre_trim_md5sum {
 
 /* 
     ==================
-    trim raw data
+    Trim raw data
     ==================
 */
 
@@ -66,7 +67,7 @@ process fastp_trim {
 
 /* 
     =======================
-    combine all trim report
+    Combine all trim report
     =======================
 */
 
