@@ -9,17 +9,12 @@
 nextflow.preview.dsl=2
 
 
-params.fastq_path="/projects/b1059/data/fastq/WI/dna/raw"
-params.trimmed_path="/projects/b1059/data/fastq/WI/dna/processed"
-
-params.fastq_folder="test_data/fastq"
-params.trimmed_folder="${params.fastq_folder}_fastp"
-
+// See config in config/ folder for parameter default values
 
 
 /* 
     ==================================================
-    get md5sum for raw files. do all file in 1 process
+    Calculate MD5 for all files in a single process
     ==================================================
 */
 
