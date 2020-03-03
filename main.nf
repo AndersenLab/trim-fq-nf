@@ -9,9 +9,13 @@
 nextflow.preview.dsl=2
 
 
-// See config in config/ folder for parameter default values
+// nextflow main.nf --fastq_folder folder_name
+// Note the folder_name is the name without full path
+// See config in config/ folder for default folder path
 
 println "Running fastp trimming on ${params.fastq_path}/${params.fastq_folder}"
+
+
 
 /* 
     ==================================================
