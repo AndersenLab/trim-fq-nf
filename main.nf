@@ -4,112 +4,77 @@
     Authors:
     - Dan Lu <dan.lu@northwestern.edu>
 */
-
-
 nextflow.preview.dsl=2
+// NXF_VER=20.01.0" Require later version of nextflow
+assert System.getenv("NXF_VER") == "20.01.0"
 
-
-// nextflow main.nf --fastq_folder folder_name
-// Note the folder_name is the name without full path
-// See config in config/ folder for default folder path
-
-println "Running fastp trimming on ${params.fastq_path}/${params.fastq_folder}"
-
-
-
-/* 
-    ==================================================
-    Calculate MD5 for all files in a single process
-    ==================================================
-*/
-
-process pre_trim_md5sum {
-    // this process runs in the data folder, instead of nextflow working dir
-
-    """
-    cd ${params.fastq_path}/${params.fastq_folder}
-    md5sum *.fq.gz > md5.txt
-    """
-}
-
-
-
+include { md5sum as md5sum_pre;
+          md5sum as md5sum_post; } from './md5.module.nf'
 
 /* 
     ==================
-    Trim raw data
+    trim raw data
     ==================
 */
-
 
 process fastp_trim {
 
     tag { sampleID }
 
-    publishDir "${params.trimmed_path}/${params.trimmed_folder}", mode: 'copy', pattern: "*.fq.gz"
-
+    publishDir "${params.processed_path}/${params.fastq_folder}", mode: 'copy', pattern: "*.fq.gz"
 
     input:
-      tuple sampleID, path(fq1), path(fq2) 
+      tuple val(sampleID), path(fq1), path(fq2) 
 
     output:
-      path "*_trimmed.fq.gz" 
+      tuple val(sampleID), path("${sampleID}_1P.fq.gz"), path("${sampleID}_2P.fq.gz"), emit: fastq_post
       path "*_fastp.json", emit: fastp_json
     
+    """
 
-      """
+    fastp -i $fq1 -I $fq2 \\
+          -o ${sampleID}_1P.fq.gz -O ${sampleID}_2P.fq.gz \\
+          --length_required 20 \\
+          -j ${sampleID}_fastp.json -h ${sampleID}_fastp.html
 
-      fastp -i $fq1 -I $fq2 \\
-            -o ${sampleID}_1_trimmed.fq.gz -O ${sampleID}_2_trimmed.fq.gz \\
-            --length_required 20 \\
-            -j ${sampleID}_fastp.json -h ${sampleID}_fastp.html
-
-      """
+    """
 }
-
-
 
 /* 
     =======================
-    Combine all trim report
+    combine all trim report
     =======================
 */
 
-
-
 process multi_QC {
 
-
-    publishDir "${params.trimmed_path}/${params.trimmed_folder}/multi_QC", mode: 'copy', pattern: "*.html"
+    publishDir "${params.processed_path}/${params.fastq_folder}/multi_QC", mode: 'copy'
 
     input:
       path(json) 
 
     output:
       path "*.html"
+      path "multiqc_data/*"
     
-    script:
-      """
+    """
 
-      multiqc .
+    multiqc . --data-format tsv
 
-      """
+    """
 }
 
-
-
-
 // read input
-fq = Channel.fromFilePairs("${params.fastq_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
+fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
 
+md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
 
-// run workflow
 workflow { 
+      
+    fq | (md5sum_pre & fastp_trim)
+    fastp_trim.out.fastq_post | md5sum_post // Run md5sum on post-trim
+    md5sum_pre.out.concat(md5sum_post.out).collectFile(name: md5sum_path, newLine:false)
 
-pre_trim_md5sum()  // check sum for all files. 
-
-fq | fastp_trim
-
-fastp_trim.out.fastp_json.toSortedList() | multi_QC
+    fastp_trim.out.fastp_json.collect() | multi_QC
 
 }
