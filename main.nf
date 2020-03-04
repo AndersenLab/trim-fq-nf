@@ -2,7 +2,7 @@
 /*
     Andersen Lab C. elegans Trimming Pipeline
     Authors:
-    - Dan Lu <dan.lu@northwestern.edu>
+    - Daniel Cook <danielecook@gmail.com>
 */
 nextflow.preview.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
