@@ -10,11 +10,7 @@ process md5sum {
       path "md5.txt"
     
     """
-    # Allow this command to work on unix/macos
-    if command -v md5sum; then
-      alias md5=md5sum
-    fi;
-    md5 ${fq1} > md5.txt
-    md5 ${fq2} >> md5.txt
+    md5sum ${fq1} > md5.txt
+    md5sum ${fq2} >> md5.txt
     """
 }
