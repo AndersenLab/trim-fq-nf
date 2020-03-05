@@ -22,6 +22,7 @@ process fastp_trim {
     tag { sampleID }
 
     publishDir "${params.processed_path}/${params.fastq_folder}", mode: 'copy', pattern: "*.fq.gz"
+    publishDir "${params.processed_path}/${params.fastq_folder}/multi_QC", mode: 'copy', pattern: "*_fastp.html"
 
     input:
       tuple val(sampleID), path(fq1), path(fq2) 
@@ -29,6 +30,7 @@ process fastp_trim {
     output:
       tuple val(sampleID), path("${sampleID}_1P.fq.gz"), path("${sampleID}_2P.fq.gz"), emit: fastq_post
       path "*_fastp.json", emit: fastp_json
+      path "*_fastp.html"
     
     """
 
