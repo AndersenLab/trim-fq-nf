@@ -8,8 +8,30 @@ nextflow.preview.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
 //assert System.getenv("NXF_VER") == "20.01.0"
 
-include md5sum as md5sum_pre from './md5.module.nf'
-include md5sum as md5sum_post from './md5.module.nf'
+// nextflow main.nf -profile debug
+// nextflow main.nf --fastq_folder folder_name 
+// The folder_name is the name without full path
+// See config in config/ folder for default folder path
+// default profile is quest
+
+println "Running fastp trimming on ${params.fastq_path}/${params.fastq_folder}"
+
+
+
+/* 
+    ==================================================
+    Calculate MD5 for all files in a single process
+    ==================================================
+*/
+
+process pre_trim_md5sum {
+    // this process runs in the data folder, instead of nextflow working dir
+
+    """
+    cd ${params.raw_path}/${params.fastq_folder}
+    md5sum *.fq.gz > md5.txt
+    """
+}
 
 /* 
     ==================
@@ -69,13 +91,12 @@ process multi_QC {
 // read input
 fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
 
-md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
 
 workflow { 
-      
-    fq | (md5sum_pre & fastp_trim)
-    fastp_trim.out.fastq_post | md5sum_post // Run md5sum on post-trim
-    md5sum_pre.out.concat(md5sum_post.out).collectFile(name: md5sum_path, newLine:false)
+
+    pre_trim_md5sum()  // check sum for all files. 
+
+    fq | fastp_trim
 
     fastp_trim.out.fastp_json.collect() | multi_QC
 
