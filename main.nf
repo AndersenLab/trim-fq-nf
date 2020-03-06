@@ -14,7 +14,7 @@ nextflow.preview.dsl=2
 // See config in config/ folder for default folder path
 // default profile is quest
 
-println "Running fastp trimming on ${params.fastq_path}/${params.fastq_folder}"
+println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
 
 
 
