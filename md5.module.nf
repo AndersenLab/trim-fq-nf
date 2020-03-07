@@ -12,9 +12,11 @@ process md5sum {
     """
     # Allow this command to work on unix/macos
     if command -v md5sum; then
-      alias md5=md5sum
+      md5_comm=md5sum
+    else
+      md5_comm=md5
     fi;
-    md5 ${fq1} > md5.txt
-    md5 ${fq2} >> md5.txt
+    \${md5_comm} ${fq1} > md5.txt
+    \${md5_comm} ${fq2} >> md5.txt
     """
 }
