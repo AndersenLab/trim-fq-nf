@@ -4,12 +4,17 @@
     Authors:
     - Daniel Cook <danielecook@gmail.com>
 */
+
 nextflow.preview.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
 assert System.getenv("NXF_VER") == "20.01.0"
 
-include { md5sum as md5sum_pre;
-          md5sum as md5sum_post; } from './md5.module.nf'
+
+println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
+
+
+include md5sum as md5sum_pre from './md5.module.nf'
+include md5sum as md5sum_post from './md5.module.nf'
 
 /* 
     ==================
@@ -23,13 +28,16 @@ process fastp_trim {
 
     publishDir "${params.processed_path}/${params.fastq_folder}", mode: 'copy', pattern: "*.fq.gz"
 
+    publishDir "${params.processed_path}/${params.fastq_folder}/multi_QC", mode: 'copy', pattern: "*_fastp.html"
+
     input:
       tuple val(sampleID), path(fq1), path(fq2) 
 
     output:
       tuple val(sampleID), path("${sampleID}_1P.fq.gz"), path("${sampleID}_2P.fq.gz"), emit: fastq_post
       path "*_fastp.json", emit: fastp_json
-    
+      path "*_fastp.html"
+
     """
 
     fastp -i $fq1 -I $fq2 \\
