@@ -3,6 +3,7 @@
     Andersen Lab C. elegans Trimming Pipeline
     Authors:
     - Daniel Cook <danielecook@gmail.com>
+    - Dan Lu <dan.lu@northwestern.edu>
 */
 
 nextflow.preview.dsl=2
@@ -15,6 +16,23 @@ println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
 
 include md5sum as md5sum_pre from './md5.module.nf'
 include md5sum as md5sum_post from './md5.module.nf'
+
+
+// read input
+fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
+
+md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
+
+workflow { 
+      
+    fq | (md5sum_pre & fastp_trim)
+    fastp_trim.out.fastq_post | md5sum_post // Run md5sum on post-trim
+    md5sum_pre.out.concat(md5sum_post.out).collectFile(name: md5sum_path, newLine:false)
+
+    fastp_trim.out.fastp_json.collect() | multi_QC
+
+}
+
 
 /* 
     ==================
@@ -72,17 +90,4 @@ process multi_QC {
     """
 }
 
-// read input
-fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
 
-md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
-
-workflow { 
-      
-    fq | (md5sum_pre & fastp_trim)
-    fastp_trim.out.fastq_post | md5sum_post // Run md5sum on post-trim
-    md5sum_pre.out.concat(md5sum_post.out).collectFile(name: md5sum_path, newLine:false)
-
-    fastp_trim.out.fastp_json.collect() | multi_QC
-
-}
