@@ -7,7 +7,7 @@
 
 nextflow.preview.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
-assert System.getenv("NXF_VER") == "20.01.0"
+//assert System.getenv("NXF_VER") == "20.01.0"
 
 
 println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
