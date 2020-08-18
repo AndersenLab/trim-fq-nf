@@ -33,14 +33,10 @@ workflow {
 
     fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
 
-
-    fq | (md5sum_pre & fastp_trim)
-    fq.combine(genome_sheet) | screen_species
-    fastp_trim.out.fastq_post | md5sum_post // Run md5sum on post-trim
-    md5sum_pre.out.concat(md5sum_post.out).collectFile(name: md5sum_path, newLine:false)
-
+    fq | fastp_trim
     fastp_trim.out.fastp_json.collect() | multi_QC_trim
 
+    fq.combine(genome_sheet) | screen_species
     screen_species.out.collect() | multi_QC_species
 
     // 
@@ -98,7 +94,7 @@ process screen_species {
         tuple val(sampleID), path(fq1), path(fq2), genome_row
 
     output:
-        tuple path("*.stats"), path("*.duplicates.txt")
+        tuple path("*.stats")
 
     """
         zcat ${fq1} | head -n ${params.subsample_read_count} > subset_R1.fq
@@ -164,7 +160,7 @@ process multi_QC_species {
         path("*")
 
     output:
-        path("*")
+        path("multiqc_data/multiqc_samtools_stats.txt")
 
     """
         multiqc .
