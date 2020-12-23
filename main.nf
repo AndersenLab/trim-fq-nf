@@ -51,6 +51,7 @@ if (params.fastq_folder == null) {
 }
 
 
+params.trim_only = false
 params.genome_sheet = "${workflow.projectDir}/genome_sheet.tsv"
 params.species_output = "species_check"   // default is to write species output to current folder
 params.subsample_read_count = "10000"  // 
@@ -76,17 +77,18 @@ To run the pipeline:
 nextflow main.nf --debug
 nextflow main.nf --fastq_folder 20180405_fromNUSeq
 
-    parameters              description                                  Set/Default
-    ==========              ===========                                  ========================
-    --debug                 Use --debug to indicate debug mode           ${params.debug}
-    --fastq_folder          Name of the raw fastq folder                 ${params.fastq_folder}
-    --raw_path              Path to raw fastq folder                     ${params.raw_path}
-    --processed_path        Path to processed fastq folder (output)      ${params.processed_path}
-    --genome_sheet          File with fasta locations for species check  ${params.genome_sheet}
-    --species_output        Folder name to write species check results   ${params.species_output}
-    --subsample_read_count  How many reads to use for sepciec check      ${params.subsample_read_count}
+    parameters              description                                   Set/Default
+    ==========              ===========                                   ========================
+    --debug                 Use --debug to indicate debug mode            ${params.debug}
+    --fastq_folder          Name of the raw fastq folder                  ${params.fastq_folder}
+    --raw_path              Path to raw fastq folder                      ${params.raw_path}
+    --processed_path        Path to processed fastq folder (output)       ${params.processed_path}
+    --trim_only             Whether to skip species check and only trim   ${params.trim_only}
+    --genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
+    --species_output        Folder name to write species check results    ${params.species_output}
+    --subsample_read_count  How many reads to use for sepciec check       ${params.subsample_read_count}
 
-    username                                                             ${"whoami".execute().in.text}
+    username                                                              ${"whoami".execute().in.text}
 
 """
 
@@ -118,8 +120,12 @@ workflow {
     fq | fastp_trim
     fastp_trim.out.fastp_json.collect() | multi_QC_trim
 
-    fq.combine(genome_sheet) | screen_species
-    screen_species.out.collect() | multi_QC_species
+
+    if (!params.trim_only) {
+        fq.combine(genome_sheet) | screen_species
+        screen_species.out.collect() | multi_QC_species
+    }
+
 
 
 
@@ -175,7 +181,7 @@ process screen_species {
         tuple val(sampleID), path(fq1), path(fq2), genome_row
 
     output:
-        tuple path("*.stats")
+        path("*.stats")
 
     """
         zcat ${fq1} | head -n ${params.subsample_read_count} > subset_R1.fq
