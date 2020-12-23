@@ -1,12 +1,24 @@
-# trimmomatic-nf
+# trim-fq-nf
 
-[Documentation](http://andersenlab.org/dry-guide/pipeline-trimming/)
+### Typical use for debugging:
 
-## Debug locally
-
-You can test the pipeline locally with the following command. Note that you must
-use dsl2 with version `20.01.0` of nextflow.
-
-```bash
-NXF_VER=20.01.0 nextflow run main.nf -resume -profile debug
 ```
+nextflow main.nf --debug
+```
+
+### Typical use for new fastq:
+```
+nextflow main.nf --fastq_folder 20180405_fromNUSeq
+```
+
+### Parameters
+    parameters              description                                   Set/Default
+    ==========              ===========                                   ========================
+    --debug                 Use --debug to indicate debug mode            NA
+    --fastq_folder          Name of the raw fastq folder                  required
+    --raw_path              Path to raw fastq folder                      /projects/b1059/data/fastq/WI/dna/raw
+    --processed_path        Path to processed fastq folder (output)       /projects/b1059/data/fastq/WI/dna/processed
+    --trim_only             Whether to skip species check and only trim   false
+    --genome_sheet          File with fasta locations for species check   genome_sheet.tsv in main folder
+    --species_output        Folder name to write species check results    species_check in current folder
+    --subsample_read_count  How many reads to use for sepciec check       10000
