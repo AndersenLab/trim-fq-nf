@@ -11,7 +11,6 @@ nextflow.preview.dsl=2
 //assert System.getenv("NXF_VER") == "20.01.0"
 
 
-println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
 
 
 include md5sum as md5sum_pre from './md5.module.nf'
@@ -19,10 +18,93 @@ include md5sum as md5sum_post from './md5.module.nf'
 
 
 // read input
+if (params.debug) {
+    println """
+
+        *** Using debug mode ***
+
+    """
+    params.raw_path="/projects/b1059/workflows/trim-fq-nf/test_data/raw" 
+    params.fastq_folder="fq_run"
+    params.processed_path="/projects/b1059/workflows/trim-fq-nf/test_data/processed"
+
+} else {
+
+    params.raw_path="/projects/b1059/data/fastq/WI/dna/raw"
+    params.processed_path="/projects/b1059/data/fastq/WI/dna/processed"
+
+
+}
+
+
+// required inputs
+if (params.fastq_folder == null) {
+    if (params.help) {
+    } else {
+        println """
+
+        Please specify fastq folder name with --fastq_folder
+
+        """
+        exit 1
+    }
+}
+
+
 params.genome_sheet = "${workflow.projectDir}/genome_sheet.tsv"
 params.species_output = "species_check"   // default is to write species output to current folder
 params.subsample_read_count = "10000"  // 
 md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
+
+
+
+def log_summary() {
+
+  out='''
+                                                                              
+____           .__                     _____                            _____ 
+_/  |_ _______ |__|  _____           _/ ____\\  ______           ____  _/ ____\\
+\\   __\\\\_  __ \\|  | /     \\   ______ \\   __\\  / ____/  ______  /    \\ \\   __\\ 
+ |  |   |  | \\/|  ||  Y Y  \\ /_____/  |  |   < <_|  | /_____/ |   |  \\ |  |   
+ |__|   |__|   |__||__|_|  /          |__|    \\__   |         |___|  / |__|   
+                         \\/                      |__|              \\/         
+                                                                              
+
+''' + """
+To run the pipeline:
+
+nextflow main.nf --debug
+nextflow main.nf --fastq_folder 20180405_fromNUSeq
+
+    parameters              description                                  Set/Default
+    ==========              ===========                                  ========================
+    --debug                 Use --debug to indicate debug mode           ${params.debug}
+    --fastq_folder          Name of the raw fastq folder                 ${params.fastq_folder}
+    --raw_path              Path to raw fastq folder                     ${params.raw_path}
+    --processed_path        Path to processed fastq folder (output)      ${params.processed_path}
+    --genome_sheet          File with fasta locations for species check  ${params.genome_sheet}
+    --species_output        Folder name to write species check results   ${params.species_output}
+    --subsample_read_count  How many reads to use for sepciec check      ${params.subsample_read_count}
+
+    username                                                             ${"whoami".execute().in.text}
+
+"""
+
+out
+
+}
+
+
+log.info(log_summary())
+
+
+if (params.help) {
+    exit 1
+}
+
+
+println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
+
 
 
 workflow { 
@@ -39,7 +121,6 @@ workflow {
     fq.combine(genome_sheet) | screen_species
     screen_species.out.collect() | multi_QC_species
 
-    // 
 
 
 }
