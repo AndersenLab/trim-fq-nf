@@ -116,6 +116,7 @@ workflow {
                       .splitCsv(header:true, sep: "\t")
 
     fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
+                .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
 
     fq | fastp_trim
     fastp_trim.out.fastp_json.collect() | multi_QC_trim
