@@ -1,0 +1,181 @@
+---
+title: "Species check for FQ_HOLDER"
+author: Katie Evans
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+rmd_output_metadata:
+  rsc_output_files:
+      -"*.tsv"
+      
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, message = F)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(fuzzyjoin)
+library(gsheet)
+
+options(tibble.width = Inf)
+options(scipen=999)
+
+```
+
+```{r}
+
+fq_folder <- "FQ_HOLDER"
+date_label <- stringr::str_split_fixed(fq_folder, "_", 2)[,1]
+RET <- stringr::str_split_fixed(fq_folder, "_", 2)[,2]
+
+```
+
+
+```{r}
+### Load sample sheet and append species. Note the species name should be the same as what the species_check used
+ce_WI <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/10x-CcKNCl80F9hMcrGWC4fhP_cbekSzi5_IYBY2UqCc/edit?usp=sharing") %>%
+    dplyr::select(strain) %>%
+    dplyr::mutate(species_in_record="c_elegans")
+
+cb_WI <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1IJHMLwuaxS_sEO31TyK5NLxPX7_qSd0bHNKverAv8-0/edit?usp=sharing") %>%
+    dplyr::select(strain) %>%
+    dplyr::mutate(species_in_record="c_briggsae")
+
+ct_WI <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1mqXOlUX7UeiPBe8jfAwFZnqlzhb7X-eKGK_TydT7Gx4/edit?usp=sharing") %>%
+        dplyr::select(strain) %>%
+        dplyr::mutate(species_in_record="c_tropicalis")
+
+wi_all = bind_rows(ce_WI, cb_WI, ct_WI)
+
+```
+
+
+
+```{r, fig.width=17, fig.height=20}
+
+# read in multiqc data
+sc_stats <- read.delim("species_check/multiqc_data/multiqc_samtools_stats.txt", stringsAsFactors=FALSE) %>% 
+    dplyr::distinct() %>%
+    dplyr::filter(Sample != "Sample") %>%
+    tidyr::separate(Sample, c("sample","likely_species"), sep="_xxx_") %>% 
+    dplyr::mutate(strain = stringr::str_split_fixed(sample, "_", 2)[,1]) %>%
+    dplyr::mutate(bases_mapped_percent = as.numeric(bases_mapped_.cigar.)/as.numeric(total_length) * 100) %>% 
+    dplyr::select(strain, sample, likely_species, bases_mapped_percent)
+
+sc_max <- sc_stats %>%
+    dplyr::group_by(sample) %>% 
+    dplyr::top_n(n = 1, wt = bases_mapped_percent) %>% 
+    dplyr::left_join(wi_all) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::mutate(species_in_record = ifelse(is.na(species_in_record), "not_in_record", species_in_record))
+
+print(paste0("Total strains: ", nrow(sc_max)))
+```
+
+
+### Automatically fix those not in strain sheet based on Robyn's sequencing sheet
+```{r}
+# split out those that are not in master sheet
+sc_max_not_in <- sc_max %>%
+    dplyr::filter(species_in_record == "not_in_record")
+sc_max_in <- sc_max %>%
+    dplyr::filter(species_in_record != "not_in_record")
+
+print(paste0("Strains not in master sheet: ", nrow(sc_max_not_in)))
+
+# load Robyn's sequencing sheet
+seq_sheet <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1CpSpzU1p-WtGKIMBK99DL5AeZb-A8QrHPuLkM_fAuEY/edit#gid=484600292") %>%
+    dplyr::select(sample, species) %>% 
+    separate(sample, c("strain","pool_in_sheet"), sep = "_")
+
+sc_max_not_in <- sc_max_not_in %>%
+    dplyr::left_join(seq_sheet, by="strain")
+
+DT::datatable(sc_max_not_in)
+
+# Use Robyn's sheet for the species, but need to re-format species names
+sc_max_not_in <- sc_max_not_in %>%
+    dplyr::select(-species_in_record, -pool_in_sheet) %>%
+    dplyr::rename(species_in_record=species) %>% unique() %>%
+    dplyr::mutate(species_in_record = str_replace(species_in_record, "C. nigoni", "c_nigoni")) %>%
+    dplyr::mutate(species_in_record = str_replace(species_in_record, "C. briggsae", "c_briggsae")) %>% 
+    dplyr::mutate(species_in_record = str_replace(species_in_record, "C. elegans", "c_elegans")) %>% 
+    dplyr::mutate(species_in_record = str_replace(species_in_record, "C. tropicalis", "c_tropicalis"))
+    
+
+sc_max <- dplyr::bind_rows(sc_max_not_in, sc_max_in)
+
+print(paste0("Total strains double check: ", nrow(sc_max)))
+```
+
+
+### Strains which labeled species is different from most mapped species
+
+```{r, fig.width=5, fig.height=2.4}
+problem_strains <- sc_max %>%
+    dplyr::filter(likely_species != species_in_record)
+
+# here take out all problematic strains. note that each strain may have > 1 samples (aka sequencing runs)
+problem_plot_strains = problem_strains %>%
+    dplyr::filter(species_in_record != "not_in_record") %>%  
+    dplyr::select(sample) %>% 
+    dplyr::inner_join(sc_stats) 
+
+sample_list <- unique(problem_plot_strains$sample)
+
+print(paste0("Strain counts: ", length(sample_list)))
+
+problem_plot <- function(sample_name) {
+
+    sc_max %>%
+        dplyr::filter(sample == sample_name) %>%
+        dplyr::select(strain, pool, species_in_record, likely_species) %>% 
+        knitr::kable() %>% 
+        print()
+    
+    p = problem_plot_strains %>% 
+        dplyr::filter(sample==sample_name) %>% 
+        ggplot2::ggplot() +  
+        ggplot2::geom_bar(aes(x=likely_species, y=bases_mapped_percent,fill=likely_species), stat = "identity") +
+        ggplot2::coord_flip() + 
+        ggplot2::theme_light() + 
+        ggplot2::theme(legend.position = "none", strip.text = element_text(size = 14, face = "bold"), 
+                       axis.text.x = element_text(size=11), axis.text.y = element_text(face = "bold"), 
+                       axis.title.x = element_text(size=13, face="bold")) + 
+        ggplot2::ggtitle(sample_name) + 
+        ggplot2::ylim(0,100)
+    
+    print(p)
+
+}
+
+
+purrr::walk(sample_list, problem_plot)
+```
+
+<br>
+
+### Strains that have less than 50% reads mapped to the most likely species. 
+Currently this is only checked but not used to filter libraries (low coverage will be filtered after mapping), however do need to manually remove libraries that map bad to all species and label them on Robyn's MislabeledSpecies sheet
+
+```{r, fig.width=5, fig.height=2.4}
+problem_strains <- sc_max %>%
+    dplyr::filter(bases_mapped_percent < 50)
+
+# here take out all problematic strains. note that each strain may have > 1 samples (aka sequencing runs)
+problem_plot_strains = problem_strains %>%  
+    dplyr::select(sample) %>% 
+    dplyr::inner_join( sc_stats ) 
+
+sample_list <- unique(problem_plot_strains$sample)
+
+print(paste0("Strain counts: ", length(sample_list)))
+
+purrr::walk(sample_list, problem_plot)
+```
+
+
+```{r}
+sessionInfo()
+```

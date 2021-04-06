@@ -6,11 +6,16 @@
     - Dan Lu <dan.lu@northwestern.edu>
 */
 
+// make sure nextflow version is 20+
+if( !nextflow.version.matches('20.0+') ) {
+    println "This workflow requires Nextflow version 20.0 or greater -- You are running version $nextflow.version"
+    println "On QUEST, you can use `module load python/anaconda3.6; source activate /projects/b1059/software/conda_envs/nf20_env`"
+    exit 1
+}
+
 nextflow.preview.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
 //assert System.getenv("NXF_VER") == "20.01.0"
-
-
 
 
 include md5sum as md5sum_pre from './md5.module.nf'
@@ -24,14 +29,15 @@ if (params.debug) {
         *** Using debug mode ***
 
     """
-    params.raw_path="/projects/b1059/workflows/trim-fq-nf/test_data/raw" 
-    params.fastq_folder="fq_run"
+    params.raw_path="/projects/b1059/projects/Katie/trim-fq-nf/test_data/raw" 
+    params.fastq_folder="20210406_test1"
     params.processed_path="/projects/b1059/workflows/trim-fq-nf/test_data/processed"
 
 } else {
 
     params.raw_path="/projects/b1059/data/fastq/WI/dna/raw"
     params.processed_path="/projects/b1059/data/fastq/WI/dna/processed"
+    //params.processed_path="/projects/b1059/data"
 
 
 }
@@ -52,11 +58,11 @@ if (params.fastq_folder == null) {
 
 
 params.trim_only = false
-params.genome_sheet = "${workflow.projectDir}/genome_sheet.tsv"
-params.species_output = "species_check"   // default is to write species output to current folder
+params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
+//params.species_output = "species_check"   // default is to write species output to current folder
 params.subsample_read_count = "10000"  // 
 md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
-
+params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
 
 
 def log_summary() {
@@ -86,7 +92,7 @@ nextflow main.nf --fastq_folder 20180405_fromNUSeq
     --trim_only             Whether to skip species check and only trim   ${params.trim_only}
     --genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
     --species_output        Folder name to write species check results    ${params.species_output}
-    --subsample_read_count  How many reads to use for sepciec check       ${params.subsample_read_count}
+    --subsample_read_count  How many reads to use for species check       ${params.subsample_read_count}
 
     username                                                              ${"whoami".execute().in.text}
 
@@ -111,6 +117,9 @@ println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
 
 workflow { 
 
+    // create sample sheet
+    generate_sample_sheet()
+
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
                       .splitCsv(header:true, sep: "\t")
@@ -125,6 +134,10 @@ workflow {
     if (!params.trim_only) {
         fq.combine(genome_sheet) | screen_species
         screen_species.out.collect() | multi_QC_species
+
+        // run more species check and generate species-specific sample sheet
+        generate_sample_sheet.out
+            .combine(multi_QC_species.out) | species_check
     }
 
 
@@ -254,3 +267,132 @@ process multi_QC_species {
         multiqc .
     """
 }
+
+/* 
+    ================================
+    Make sample sheet
+    ================================
+*/
+
+process generate_sample_sheet {
+    
+    publishDir "${params.species_output}", mode: 'copy'
+
+    output:
+        path("sample_sheet_${params.fastq_folder}_all_temp.tsv")
+        
+
+    """
+    fq_sheet=`mktemp`
+    date=`echo ${params.fastq_folder} | cut -d _ -f 1`
+    prefix="${params.raw_path}/${params.fastq_folder}"
+
+    ls \${prefix}/*.gz -1 | xargs -n1 basename |\
+    awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\$date '{
+        fq1 = \$1;
+        fq2 = \$1;
+        gsub("1P.fq.gz", "2P.fq.gz", fq2);
+        split(\$0, a, "_");
+        SM = a[1];
+        split(\$0, b, "_CKD");
+        ID = b[1];
+        gsub("\$", "_", ID);
+        gsub("\$", date, ID);
+        LB = b[1]
+        gsub("\$", "_", LB);
+        gsub("\$", date, LB);
+        print SM"\\t"ID"\\t"LB"\\t"prefix"/"fq1"\\t"prefix"/"fq2"\\t"seq_folder
+    }' | sed -n '1~2p' >> \${fq_sheet}
+
+    if [[ \$(cut -f 2 \${fq_sheet} | sort | uniq -c | grep -v '1 ') ]]; then
+        >&2 echo "There are duplicate IDs in the sample sheet. Please review 'inventory.error'"
+    fi
+
+    cat \${fq_sheet} | sort | sed '1 i\\strain\\tid\\tlb\\tfq1\\tfq2\\tseq_folder' > sample_sheet_${params.fastq_folder}_all_temp.tsv
+
+    """
+
+}
+
+/* 
+    ================================
+    analyze species check
+    ================================
+*/
+
+process species_check {
+
+    publishDir "${params.species_output}/sample_sheet/", mode: 'copy', pattern: 'sample_sheet*.tsv'
+    publishDir "${params.species_output}/", mode: 'copy', pattern: '*multiple_libraries.tsv'
+    publishDir "${params.species_output}/", mode: 'copy', pattern: '*master_sheet.tsv'
+    publishDir "${params.species_output}/", mode: 'copy', pattern: 'WI_all*.tsv'
+    publishDir "${params.species_output}/", mode: 'copy', pattern: '*_species.tsv'
+    publishDir "${params.species_output}/", mode: 'copy', pattern: '*html'
+
+    input:
+        tuple file("sample_sheet"), file("multiqc_samtools_stats")
+
+    output:
+        tuple file("*.tsv"), file("*.html")
+
+    """
+        # for some reason, tsv aren't being saved in r markdown, so get around with an R script
+        echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" | cat - ${workflow.projectDir}/bin/species_check.R > species_check.R 
+        Rscript --vanilla species_check.R ${params.fastq_folder} ${multiqc_samtools_stats} ${sample_sheet}
+
+        # copy R markdown and insert date and pool
+        cat "${workflow.projectDir}/bin/species_check.Rmd" | sed "s/FQ_HOLDER/${params.fastq_folder}/g" > species_check_${params.fastq_folder}.Rmd 
+
+        # add R library path
+        echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
+
+        # make markdown
+        Rscript -e "rmarkdown::render('species_check_${params.fastq_folder}.Rmd', knit_root_dir='${workflow.launchDir}')"
+
+    """
+
+
+}
+
+workflow.onComplete {
+
+    summary = """
+
+    Pipeline execution summary
+    ---------------------------
+    Completed at: ${workflow.complete}
+    Duration    : ${workflow.duration}
+    Success     : ${workflow.success}
+    workDir     : ${workflow.workDir}
+    exit status : ${workflow.exitStatus}
+    Error report: ${workflow.errorReport ?: '-'}
+    Git info: $workflow.repository - $workflow.revision [$workflow.commitId]
+
+    { Parameters }
+    ---------------------------
+    --debug                     ${params.debug}
+    --fastq_folder              ${params.fastq_folder}
+    --raw_path                  ${params.raw_path}
+    --processed_path            ${params.processed_path}
+    --trim_only                 ${params.trim_only}
+    --genome_sheet              ${params.genome_sheet}
+    --species_output            ${params.species_output}
+    --subsample_read_count      ${params.subsample_read_count}
+
+    """
+
+    println summary
+
+    def outlog = new File("${params.species_output}/log.txt")
+    outlog.newWriter().withWriter {
+        outlog << param_summary
+        outlog << summary
+    }
+
+
+}
+
+
+
+
+
