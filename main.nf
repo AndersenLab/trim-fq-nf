@@ -4,6 +4,7 @@
     Authors:
     - Daniel Cook <danielecook@gmail.com>
     - Dan Lu <dan.lu@northwestern.edu>
+    - Katie Evans <kathryn.evans@northwestern.edu>
 */
 
 // make sure nextflow version is 20+
@@ -17,7 +18,7 @@ nextflow.preview.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
 //assert System.getenv("NXF_VER") == "20.01.0"
 
-
+// these aren't used??
 include md5sum as md5sum_pre from './md5.module.nf'
 include md5sum as md5sum_post from './md5.module.nf'
 
@@ -29,18 +30,20 @@ if (params.debug) {
         *** Using debug mode ***
 
     """
-    params.raw_path="/projects/b1059/projects/Katie/trim-fq-nf/test_data/raw" 
+    params.raw_path="${workflow.projectDir}/test_data/raw" 
     params.fastq_folder="20210406_test1"
-    params.processed_path="/projects/b1059/workflows/trim-fq-nf/test_data/processed"
+    params.processed_path="${workflow.projectDir}/test_data/processed"
 
 } else {
 
-    params.raw_path="/projects/b1059/data/fastq/WI/dna/raw"
-    params.processed_path="/projects/b1059/data/fastq/WI/dna/processed"
+    params.raw_path="/projects/b1059/data/transfer/raw"
+    params.processed_path="/projects/b1059/data/transfer/processed"
     //params.processed_path="/projects/b1059/data"
 
-
 }
+
+    params.out="processFQ-${params.fastq_folder}"
+
 
 
 // required inputs
@@ -59,8 +62,7 @@ if (params.fastq_folder == null) {
 
 params.trim_only = false
 params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
-//params.species_output = "species_check"   // default is to write species output to current folder
-params.subsample_read_count = "10000"  // 
+params.subsample_read_count = "10000"  
 md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
 params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
 
@@ -91,7 +93,7 @@ nextflow main.nf --fastq_folder 20180405_fromNUSeq
     --processed_path        Path to processed fastq folder (output)       ${params.processed_path}
     --trim_only             Whether to skip species check and only trim   ${params.trim_only}
     --genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
-    --species_output        Folder name to write species check results    ${params.species_output}
+    --out                   Folder name to write results                  ${params.out}
     --subsample_read_count  How many reads to use for species check       ${params.subsample_read_count}
 
     username                                                              ${"whoami".execute().in.text}
@@ -127,9 +129,6 @@ workflow {
     fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
                 .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
 
-    fq | fastp_trim
-    fastp_trim.out.fastp_json.collect() | multi_QC_trim
-
 
     if (!params.trim_only) {
         fq.combine(genome_sheet) | screen_species
@@ -138,11 +137,14 @@ workflow {
         // run more species check and generate species-specific sample sheet
         generate_sample_sheet.out
             .combine(multi_QC_species.out) | species_check
+
+        fq | fastp_trim
+        fastp_trim.out.fastp_json.collect() | multi_QC_trim
+
+    } else {
+        fq | fastp_trim
+        fastp_trim.out.fastp_json.collect() | multi_QC_trim
     }
-
-
-
-
 }
 
 
@@ -158,7 +160,7 @@ process fastp_trim {
 
     publishDir "${params.processed_path}/${params.fastq_folder}", mode: 'copy', pattern: "*.fq.gz"
 
-    publishDir "${params.processed_path}/${params.fastq_folder}/multi_QC", mode: 'copy', pattern: "*_fastp.html"
+    publishDir "${params.out}/multi_QC", mode: 'copy', pattern: "*_fastp.html"
 
     input:
       tuple val(sampleID), path(fq1), path(fq2) 
@@ -229,7 +231,7 @@ process screen_species {
 
 process multi_QC_trim {
 
-    publishDir "${params.processed_path}/${params.fastq_folder}/multi_QC", mode: 'copy'
+    publishDir "${params.out}/multi_QC", mode: 'copy'
 
     input:
       path(json) 
@@ -255,7 +257,7 @@ process multi_QC_trim {
 
 process multi_QC_species {
 
-    publishDir "${params.species_output}", mode: 'copy'
+    publishDir "${params.out}", mode: 'copy'
 
     input:
         path("*")
@@ -274,9 +276,11 @@ process multi_QC_species {
     ================================
 */
 
+// this only works for R1_001.fastq.gz right now...
+
 process generate_sample_sheet {
     
-    publishDir "${params.species_output}", mode: 'copy'
+    publishDir "${params.out}", mode: 'copy'
 
     output:
         path("sample_sheet_${params.fastq_folder}_all_temp.tsv")
@@ -287,21 +291,21 @@ process generate_sample_sheet {
     date=`echo ${params.fastq_folder} | cut -d _ -f 1`
     prefix="${params.raw_path}/${params.fastq_folder}"
 
-    ls \${prefix}/*.gz -1 | xargs -n1 basename |\
+    ls \${prefix}/*.gz -1 | xargs -n1 basename | \
     awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\$date '{
         fq1 = \$1;
         fq2 = \$1;
-        gsub("1P.fq.gz", "2P.fq.gz", fq2);
+        gsub("R1_001.fastq.gz", "R2_001.fastq.gz", fq2);
         split(\$0, a, "_");
         SM = a[1];
-        split(\$0, b, "_CKD");
+        split(\$0, b, "_R");
         ID = b[1];
         gsub("\$", "_", ID);
         gsub("\$", date, ID);
         LB = b[1]
         gsub("\$", "_", LB);
         gsub("\$", date, LB);
-        print SM"\\t"ID"\\t"LB"\\t"prefix"/"fq1"\\t"prefix"/"fq2"\\t"seq_folder
+        print SM"\\t"ID"\\t"LB"\\t"fq1"\\t"fq2"\\t"seq_folder
     }' | sed -n '1~2p' >> \${fq_sheet}
 
     if [[ \$(cut -f 2 \${fq_sheet} | sort | uniq -c | grep -v '1 ') ]]; then
@@ -314,6 +318,9 @@ process generate_sample_sheet {
 
 }
 
+//         print SM"\\t"ID"\\t"LB"\\t"prefix"/"fq1"\\t"prefix"/"fq2"\\t"seq_folder
+
+
 /* 
     ================================
     analyze species check
@@ -322,12 +329,12 @@ process generate_sample_sheet {
 
 process species_check {
 
-    publishDir "${params.species_output}/sample_sheet/", mode: 'copy', pattern: 'sample_sheet*.tsv'
-    publishDir "${params.species_output}/", mode: 'copy', pattern: '*multiple_libraries.tsv'
-    publishDir "${params.species_output}/", mode: 'copy', pattern: '*master_sheet.tsv'
-    publishDir "${params.species_output}/", mode: 'copy', pattern: 'WI_all*.tsv'
-    publishDir "${params.species_output}/", mode: 'copy', pattern: '*_species.tsv'
-    publishDir "${params.species_output}/", mode: 'copy', pattern: '*html'
+    publishDir "${params.out}/sample_sheet/", mode: 'copy', pattern: 'sample_sheet*.tsv'
+    publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*multiple_libraries.tsv'
+    publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*master_sheet.tsv'
+    publishDir "${params.out}/species_check/", mode: 'copy', pattern: 'WI_all*.tsv'
+    publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*_species.tsv'
+    publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*.html'
 
     input:
         tuple file("sample_sheet"), file("multiqc_samtools_stats")
@@ -376,14 +383,14 @@ workflow.onComplete {
     --processed_path            ${params.processed_path}
     --trim_only                 ${params.trim_only}
     --genome_sheet              ${params.genome_sheet}
-    --species_output            ${params.species_output}
+    --out                       ${params.out}
     --subsample_read_count      ${params.subsample_read_count}
 
     """
 
     println summary
 
-    def outlog = new File("${params.species_output}/log.txt")
+    def outlog = new File("${params.out}/log.txt")
     outlog.newWriter().withWriter {
         outlog << param_summary
         outlog << summary

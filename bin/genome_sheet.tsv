@@ -1,5 +1,5 @@
 species	genome
-c_elegans	/projects/b1059/data/genomes/c_elegans/PRJNA13758/WS276/c_elegans.PRJNA13758.WS276.genome.fa.gz
+c_elegans	/projects/b1059/data/c_elegans/genomes/PRJNA13758/WS276/c_elegans.PRJNA13758.WS276.genome.fa.gz
 c_brenneri	/projects/b1059/projects/Dan/20200518_species_check/genomes/c_brenneri.PRJNA20035.WS276.genomic.fa.gz
 c_inopinata	/projects/b1059/projects/Dan/20200518_species_check/genomes/c_inopinata.PRJDB5687.WS276.genomic.fa.gz
 c_japonica	/projects/b1059/projects/Dan/20200518_species_check/genomes/c_japonica.PRJNA12591.WS276.genomic.fa.gz
