@@ -130,7 +130,8 @@ problem_plot <- function(sample_name) {
 
     sc_max %>%
         dplyr::filter(sample == sample_name) %>%
-        dplyr::select(strain, pool, species_in_record, likely_species) %>% 
+        # dplyr::select(strain, pool, species_in_record, likely_species) %>% 
+        dplyr::select(strain, species_in_record, likely_species) %>% 
         knitr::kable() %>% 
         print()
     

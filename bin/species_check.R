@@ -137,13 +137,13 @@ c_briggsae_new = all %>%
 #  CREATE FULL SAMPLE SHEET
 #######################
 # load sheet containing all fq before this pool
-fq_elegans <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1CpSpzU1p-WtGKIMBK99DL5AeZb-A8QrHPuLkM_fAuEY/edit#gid=538831623") %>%
+fq_elegans <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1CpSpzU1p-WtGKIMBK99DL5AeZb-A8QrHPuLkM_fAuEY/edit#gid=719017664") %>%
     dplyr::select(strain:seq_folder) %>%
     dplyr::mutate(species = "c_elegans")
-fq_briggsae <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1CpSpzU1p-WtGKIMBK99DL5AeZb-A8QrHPuLkM_fAuEY/edit#gid=203331611") %>%
+fq_briggsae <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1CpSpzU1p-WtGKIMBK99DL5AeZb-A8QrHPuLkM_fAuEY/edit#gid=872003994") %>%
     dplyr::select(strain:seq_folder) %>%
     dplyr::mutate(species = "c_briggsae")
-fq_tropicalis <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1CpSpzU1p-WtGKIMBK99DL5AeZb-A8QrHPuLkM_fAuEY/edit#gid=504932799") %>%
+fq_tropicalis <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1CpSpzU1p-WtGKIMBK99DL5AeZb-A8QrHPuLkM_fAuEY/edit#gid=1811021622") %>%
     dplyr::select(strain:seq_folder) %>%
     dplyr::mutate(species = "c_tropicalis")
 

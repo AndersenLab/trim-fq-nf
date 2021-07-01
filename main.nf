@@ -60,7 +60,6 @@ if (params.fastq_folder == null) {
 }
 
 
-params.trim_only = false
 params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
 params.subsample_read_count = "10000"  
 md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
@@ -91,7 +90,8 @@ nextflow main.nf --fastq_folder 20180405_fromNUSeq
     --fastq_folder          Name of the raw fastq folder                  ${params.fastq_folder}
     --raw_path              Path to raw fastq folder                      ${params.raw_path}
     --processed_path        Path to processed fastq folder (output)       ${params.processed_path}
-    --trim_only             Whether to skip species check and only trim   ${params.trim_only}
+    --trim                  Whether to trim fastq                         ${params.trim}
+    --check_species         Whether to do species check                   ${params.check_species}
     --genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
     --out                   Folder name to write results                  ${params.out}
     --subsample_read_count  How many reads to use for species check       ${params.subsample_read_count}
@@ -128,23 +128,26 @@ workflow {
 
     fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
                 .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
+                .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1P,2P}.fq.gz", flat: true))
 
 
-    if (!params.trim_only) {
-        fq.combine(genome_sheet) | screen_species
+    // screen species
+    if("${params.check_species}" == true) {
+    	fq.combine(genome_sheet) | screen_species
         screen_species.out.collect() | multi_QC_species
 
         // run more species check and generate species-specific sample sheet
         generate_sample_sheet.out
             .combine(multi_QC_species.out) | species_check
+    }
 
-        fq | fastp_trim
-        fastp_trim.out.fastp_json.collect() | multi_QC_trim
-
-    } else {
-        fq | fastp_trim
+    // fastp trim
+    if("${params.trim}" == true) {
+    	fq | fastp_trim
         fastp_trim.out.fastp_json.collect() | multi_QC_trim
     }
+
+
 }
 
 
@@ -296,6 +299,8 @@ process generate_sample_sheet {
         fq1 = \$1;
         fq2 = \$1;
         gsub("R1_001.fastq.gz", "R2_001.fastq.gz", fq2);
+        gsub("R1_001.fastq.gz", "1P.fq.gz", fq1);
+        gsub("R2_001.fastq.gz", "2P.fq.gz", fq2);
         split(\$0, a, "_");
         SM = a[1];
         split(\$0, b, "_R");
@@ -335,12 +340,13 @@ process species_check {
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: 'WI_all*.tsv'
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*_species.tsv'
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*.html'
+    publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*.Rmd'
 
     input:
         tuple file("sample_sheet"), file("multiqc_samtools_stats")
 
     output:
-        tuple file("*.tsv"), file("*.html")
+        tuple file("*.tsv"), file("*.Rmd"), file("*.html")
 
     """
         # for some reason, tsv aren't being saved in r markdown, so get around with an R script
@@ -381,7 +387,8 @@ workflow.onComplete {
     --fastq_folder              ${params.fastq_folder}
     --raw_path                  ${params.raw_path}
     --processed_path            ${params.processed_path}
-    --trim_only                 ${params.trim_only}
+    --trim                      ${params.trim}
+    --check_species             ${params.check_species}
     --genome_sheet              ${params.genome_sheet}
     --out                       ${params.out}
     --subsample_read_count      ${params.subsample_read_count}
