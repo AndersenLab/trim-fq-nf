@@ -157,12 +157,12 @@ purrr::walk(sample_list, problem_plot)
 
 <br>
 
-### Strains that have less than 50% reads mapped to the most likely species. 
+### Strains that have less than 90% reads mapped to the most likely species. 
 Currently this is only checked but not used to filter libraries (low coverage will be filtered after mapping), however do need to manually remove libraries that map bad to all species and label them on Robyn's MislabeledSpecies sheet
 
 ```{r, fig.width=5, fig.height=2.4}
 problem_strains <- sc_max %>%
-    dplyr::filter(bases_mapped_percent < 50)
+    dplyr::filter(bases_mapped_percent < 90)
 
 # here take out all problematic strains. note that each strain may have > 1 samples (aka sequencing runs)
 problem_plot_strains = problem_strains %>%  
