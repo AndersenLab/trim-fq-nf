@@ -97,6 +97,8 @@ nextflow main.nf --fastq_folder 20180405_fromNUSeq
     --subsample_read_count  How many reads to use for species check       ${params.subsample_read_count}
 
     username                                                              ${"whoami".execute().in.text}
+    ----------------------------------------------------------------------------------------------
+    Git info: $workflow.repository - $workflow.revision [$workflow.commitId]
 
 """
 
