@@ -9,12 +9,6 @@ RUN conda create -n trim.fq \
                         bioconda::fastp=0.20.0 \
                         bioconda::multiqc=1.8 \
                         r=3.6.0 \
-                        bioconda::bwa=0.7.17 \
-                        bioconda::samtools=1.9 \
-                        bioconda::picard=2.21.3 \
-                        r-tidyverse=1.3.0 \
-                        r-fuzzyjoin \
-                        r-gsheet \
     && conda clean -a
 ENV PATH /opt/conda/envs/trim-fq/bin:$PATH
 # Use libhts.so from conda
