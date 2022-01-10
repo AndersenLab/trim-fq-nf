@@ -196,7 +196,7 @@ process fastp_trim {
 
 process screen_species {
 
-    conda "/projects/b1059/software/conda_envs/alignment-nf_env"
+    // conda "/projects/b1059/software/conda_envs/alignment-nf_env"
 
     input:
         tuple val(sampleID), path(fq1), path(fq2), genome_row

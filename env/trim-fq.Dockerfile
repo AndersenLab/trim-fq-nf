@@ -13,3 +13,5 @@ RUN Rscript -e "install.packages('roperators',dependencies=TRUE, repos='http://c
 RUN Rscript -e "install.packages('fuzzyjoin', dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
 # RUN Rscript -e "install.packages('devtools', dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
 RUN Rscript -e "install.packages('tidyverse', dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
+
+RUN apt-get --allow-releaseinfo-change update && apt-get install -y procps  
