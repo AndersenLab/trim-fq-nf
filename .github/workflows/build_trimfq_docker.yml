@@ -5,11 +5,11 @@ on:
   push:
     paths:
     - 'env/trim-fq.Dockerfile'
-    - '.github/workflows/build_docker.yml'
+    - '.github/workflows/build_trimfq_docker.yml'
   pull_request:
     paths:
     - 'env/trim-fq.Dockerfile'
-    - '.github/workflows/build_docker.yml'
+    - '.github/workflows/build_trimfq_docker.yml'
 
 jobs:
   build:
@@ -30,21 +30,3 @@ jobs:
         workdir: "env"
         tags: "latest"
         cache: true
-    build:
-        runs-on: ubuntu-latest
-        steps:
-        - uses: actions/checkout@v2
-
-        # Build Tools
-        - name: Build and Publish
-          uses: elgohr/Publish-Docker-Github-Action@master
-          with:
-            name: andersenlab/multiqc
-            tag: "${{ steps.current-time.formattedTime }}"
-            username: ${{ secrets.KSE_DOCKER_USER }}
-            password: ${{ secrets.KSE_DOCKER_PASS }}
-            snapshot: true
-            dockerfile: multiqc.Dockerfile
-            workdir: "env"
-            tags: "latest"
-            cache: true
