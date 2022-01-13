@@ -35,6 +35,7 @@ _/  |_ _______ |__|  _____           _/ ____\\  ______           ____  _/ ____\\
     
 ```
 
+
 ## Software requirements
 
 * Nextflow v20.01+ (see the dry guide on Nextflow [here](quest-nextflow.md) or the Nextflow documentation [here](https://www.nextflow.io/docs/latest/getstarted.html)). On QUEST, you can access this version by loading the `nf20` conda environment prior to running the pipeline command:
