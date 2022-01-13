@@ -342,7 +342,7 @@ process generate_sample_sheet {
 process species_check {
 
     // use r_packages container
-    container 'andersenlab/r_packages:v0.2'
+    container 'andersenlab/r_packages:v0.5'
 
     publishDir "${params.out}/sample_sheet/", mode: 'copy', pattern: 'sample_sheet*.tsv'
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*multiple_libraries.tsv'
