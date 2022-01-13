@@ -63,7 +63,7 @@ if (params.fastq_folder == null) {
 params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
 params.subsample_read_count = "10000"  
 md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
-params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
+//params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
 
 
 def log_summary() {
@@ -236,6 +236,9 @@ process screen_species {
 
 process multi_QC_trim {
 
+    // this process uses a different conatiner than the others
+    container 'andersenlab/multiqc'
+
     publishDir "${params.out}/multi_QC", mode: 'copy'
 
     input:
@@ -261,6 +264,8 @@ process multi_QC_trim {
 
 
 process multi_QC_species {
+
+    container 'andersenlab/multiqc'
 
     publishDir "${params.out}", mode: 'copy'
 
@@ -336,6 +341,9 @@ process generate_sample_sheet {
 
 process species_check {
 
+    // use r_packages container
+    container 'andersenlab/r_packages:v0.2'
+
     publishDir "${params.out}/sample_sheet/", mode: 'copy', pattern: 'sample_sheet*.tsv'
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*multiple_libraries.tsv'
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*master_sheet.tsv'
@@ -352,14 +360,14 @@ process species_check {
 
     """
         # for some reason, tsv aren't being saved in r markdown, so get around with an R script
-        echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" | cat - ${workflow.projectDir}/bin/species_check.R > species_check.R 
-        Rscript --vanilla species_check.R ${params.fastq_folder} ${multiqc_samtools_stats} ${sample_sheet}
+        # echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" | cat - ${workflow.projectDir}/bin/species_check.R > species_check.R 
+        Rscript --vanilla ${workflow.projectDir}/bin/species_check.R ${params.fastq_folder} ${multiqc_samtools_stats} ${sample_sheet}
 
         # copy R markdown and insert date and pool
         cat "${workflow.projectDir}/bin/species_check.Rmd" | sed "s/FQ_HOLDER/${params.fastq_folder}/g" > species_check_${params.fastq_folder}.Rmd 
 
         # add R library path
-        echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
+        # echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
 
         # make markdown
         Rscript -e "rmarkdown::render('species_check_${params.fastq_folder}.Rmd', knit_root_dir='${workflow.launchDir}')"

@@ -1,8 +1,14 @@
 #!/usr/bin/env Rscript
 
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
 library(fuzzyjoin)
 library(gsheet)
+library(knitr)
+library(ggplot2)
+library(fuzzyjoin)
 
 args = commandArgs(trailingOnly=TRUE)
 

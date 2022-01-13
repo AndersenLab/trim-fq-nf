@@ -14,9 +14,16 @@ knitr::opts_chunk$set(echo=FALSE, message = F)
 ```
 
 ```{r include=FALSE}
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
 library(fuzzyjoin)
 library(gsheet)
+library(knitr)
+library(ggplot2)
+library(purrr)
+library(fuzzyjoin)
 
 options(tibble.width = Inf)
 options(scipen=999)
@@ -172,6 +179,7 @@ problem_plot_strains = problem_strains %>%
 sample_list <- unique(problem_plot_strains$sample)
 
 print(paste0("Strain counts: ", length(sample_list)))
+
 
 purrr::walk(sample_list, problem_plot)
 ```
