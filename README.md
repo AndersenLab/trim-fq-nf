@@ -1,3 +1,6 @@
+![Build Docker (env/trim-fq.Dockerfile)](https://github.com/AndersenLab/trim-fq-nf/workflows/Build%20Docker%20(env/trim-fq.Dockerfile)/badge.svg)    ![Build Docker (env/multiqc.Dockerfile)](https://github.com/AndersenLab/trim-fq-nf/workflows/Build%20Docker%20(env/multiqc.Dockerfile)/badge.svg)
+
+
 # trim-fq-nf
 
 ### Typical use for debugging:
@@ -188,3 +191,8 @@ If a species check is run, the `species_check/sample_sheet` folder will also con
 * `sample_sheet/sample_sheet_{species}_{date}_ALL.tsv` - sample sheet for `alignment-nf` using ALL strains of a particular species (i.e. c_elegans). This is useful for species we have not performed any alignments for or when we update the reference genome and need to re-align all strains.
 
 * `sample_sheet/sample_sheet_{species}_{date}_NEW.tsv` - sample sheet for `alignment-nf` using all fastq from any library for ONLY strains sequenced in this particular library of a particular species (i.e. c_elegans, RET63). This is useful when the reference genome does not change and there is no need to re-align thousands of strains to save on computational power.
+
+# Relevant Docker Images
+
+* `andersenlab/trim-fq` ([link](https://hub.docker.com/r/andersenlab/trim-fq)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/trim-fq.Dockerfile` or `.github/workflows/build_trimfq_docker.yml` GitHub actions will create a new docker image and push if successful
+* `andersenlab/multiqc` ([link](https://hub.docker.com/r/andersenlab/multiqc)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/multiqc.Dockerfile` or `.github/workflows/build_multiqc_docker.yml` GitHub actions will create a new docker image and push if successful
