@@ -21,7 +21,7 @@ jobs:
         - name: Build and Publish
           uses: elgohr/Publish-Docker-Github-Action@master
           with:
-            name: andersenlab/multiqc
+            name: andersenlab/multiqc 
             tag: "${{ steps.current-time.formattedTime }}"
             username: ${{ secrets.KSE_DOCKER_USER }}
             password: ${{ secrets.KSE_DOCKER_PASS }}
