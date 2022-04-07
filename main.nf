@@ -237,7 +237,7 @@ process screen_species {
 process multi_QC_trim {
 
     // this process uses a different conatiner than the others
-    container 'andersenlab/multiqc'
+    container 'andersenlab/multiqc:2022030115492310c8da'
 
     publishDir "${params.out}/multi_QC", mode: 'copy'
 
@@ -265,7 +265,7 @@ process multi_QC_trim {
 
 process multi_QC_species {
 
-    container 'andersenlab/multiqc'
+    container 'andersenlab/multiqc:2022030115492310c8da'
 
     publishDir "${params.out}", mode: 'copy'
 
@@ -342,7 +342,7 @@ process generate_sample_sheet {
 process species_check {
 
     // use r_packages container
-    container 'andersenlab/r_packages:v0.5'
+    container 'andersenlab/r_packages:v0.7'
 
     publishDir "${params.out}/sample_sheet/", mode: 'copy', pattern: 'sample_sheet*.tsv'
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*multiple_libraries.tsv'
