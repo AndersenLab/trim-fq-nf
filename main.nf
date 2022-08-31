@@ -30,9 +30,9 @@ if (params.debug) {
         *** Using debug mode ***
 
     """
-    params.raw_path="${workflow.projectDir}/test_data/raw" 
-    params.fastq_folder="20210406_test1"
-    params.processed_path="${workflow.projectDir}/test_data/processed"
+    params.raw_path="/projects/b1059/data/transfer/raw" 
+    params.fastq_folder="debug_trim"
+    //params.processed_path="${workflow.projectDir}/test_data/processed"
 
 } else {
 
