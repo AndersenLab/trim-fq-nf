@@ -32,7 +32,7 @@ if (params.debug) {
     """
     params.raw_path="/projects/b1059/data/transfer/raw" 
     params.fastq_folder="debug_trim"
-    //params.processed_path="${workflow.projectDir}/test_data/processed"
+    params.processed_path="/projects/b1059/data/transfer/processed"
 
 } else {
 
@@ -122,7 +122,9 @@ println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
 workflow { 
 
     // create sample sheet
-    generate_sample_sheet()
+    Channel.fromPath("${params.raw_path}/${params.fastq_folder}").view() | generate_sample_sheet
+    
+    //generate_sample_sheet()
 
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
@@ -292,6 +294,9 @@ process generate_sample_sheet {
     
     publishDir "${params.out}", mode: 'copy'
 
+    input:
+        tuple path(seq_folder)
+
     output:
         path("sample_sheet_${params.fastq_folder}_all_temp.tsv")
         
@@ -299,10 +304,10 @@ process generate_sample_sheet {
     """
     fq_sheet=`mktemp`
     date=`echo ${params.fastq_folder} | cut -d _ -f 1`
-    prefix="${params.raw_path}/${params.fastq_folder}"
+    #prefix="${params.raw_path}/${params.fastq_folder}"
 
-    ls \${prefix}/*.gz -1 | xargs -n1 basename | \
-    awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\$date '{
+    ls ${seq_folder}/*.gz -1 | xargs -n1 basename | \
+    awk -v date=\$date '{
         fq1 = \$1;
         fq2 = \$1;
         gsub("R1_001.fastq.gz", "R2_001.fastq.gz", fq2);
