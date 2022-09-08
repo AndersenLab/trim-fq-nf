@@ -141,8 +141,7 @@ workflow {
         screen_species.out.collect() | multi_QC_species
 
         // run more species check and generate species-specific sample sheet
-        Channel.fromPath("${params.raw_path}/${params.fastq_folder}")
-            .combine(generate_sample_sheet.out)
+        generate_sample_sheet.out
             .combine(multi_QC_species.out) 
             .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")) | species_check
     }
@@ -359,23 +358,20 @@ process species_check {
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*.Rmd'
 
     input:
-        tuple path(seq_folder), file(sample_sheet), file(multiqc_samtools_stats), file(report)
+        tuple file(sample_sheet), file(multiqc_samtools_stats), file(report)
 
     output:
         tuple file("*.tsv"), file("*.Rmd"), file("*.html")
 
     """
         # for some reason, tsv aren't being saved in r markdown, so get around with an R script
-        Rscript --vanilla ${workflow.projectDir}/bin/species_check.R ${seq_folder} ${multiqc_samtools_stats} ${sample_sheet}
+        Rscript --vanilla ${workflow.projectDir}/bin/species_check.R ${params.fastq_folder} ${multiqc_samtools_stats} ${sample_sheet}
 
         # copy R markdown and insert date and pool
-        cat "${report}" | sed "s/FQ_HOLDER/${seq_folder}/g" > species_check_${seq_folder}.Rmd 
-
-        # add R library path
-        # echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
+        cat "${report}" | sed "s/FQ_HOLDER/${params.fastq_folder}/g" > species_check_${params.fastq_folder}.Rmd 
 
         # make markdown
-        Rscript -e "rmarkdown::render('species_check_${seq_folder}.Rmd')"
+        Rscript -e "rmarkdown::render('species_check_${params.fastq_folder}.Rmd')"
 
     """
 
