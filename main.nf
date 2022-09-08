@@ -31,7 +31,7 @@ if (params.debug) {
 
     """
     params.raw_path="/projects/b1059/data/transfer/raw" 
-    params.fastq_folder="debug_trim"
+    params.fastq_folder="2022_debugtrim"
     params.processed_path="/projects/b1059/data/transfer/processed"
 
 } else {
@@ -122,7 +122,7 @@ println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
 workflow { 
 
     // create sample sheet
-    Channel.fromPath("${params.raw_path}/${params.fastq_folder}") | generate_sample_sheet
+    Channel.fromPath("${params.raw_path}/${params.fastq_folder}").view() | generate_sample_sheet
     
     //generate_sample_sheet()
 
@@ -296,7 +296,7 @@ process generate_sample_sheet {
     publishDir "${params.out}", mode: 'copy'
 
     input:
-        path(seq_folder)
+        path(fq_folder)
 
     output:
         path("sample_sheet_${params.fastq_folder}_all_temp.tsv")
@@ -305,9 +305,10 @@ process generate_sample_sheet {
     """
     fq_sheet=`mktemp`
     date=`echo ${params.fastq_folder} | cut -d _ -f 1`
+    prefix="${params.raw_path}/${params.fastq_folder}"
 
-    ls ${seq_folder}/*.gz -1 | xargs -n1 basename | \
-    awk -v date=\$date '{
+    ls ${fq_folder}/*.gz -1 | xargs -n1 basename | \
+    awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\$date '{
         fq1 = \$1;
         fq2 = \$1;
         gsub("R1_001.fastq.gz", "R2_001.fastq.gz", fq2);
@@ -330,7 +331,7 @@ process generate_sample_sheet {
     fi
 
     cat \${fq_sheet} | sort | sed '1 i\\strain\\tid\\tlb\\tfq1\\tfq2\\tseq_folder' > sample_sheet_${params.fastq_folder}_all_temp.tsv
-
+    
     """
 
 }
