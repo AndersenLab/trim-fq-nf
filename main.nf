@@ -144,7 +144,7 @@ workflow {
         Channel.fromPath("${params.raw_path}/${params.fastq_folder}")
             .combine(generate_sample_sheet.out)
             .combine(multi_QC_species.out) 
-            .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")).view() | species_check
+            .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")) | species_check
     }
 
     // fastp trim
@@ -297,7 +297,7 @@ process generate_sample_sheet {
     publishDir "${params.out}", mode: 'copy'
 
     input:
-        tuple path(seq_folder)
+        path(seq_folder)
 
     output:
         path("sample_sheet_${params.fastq_folder}_all_temp.tsv")
@@ -306,7 +306,6 @@ process generate_sample_sheet {
     """
     fq_sheet=`mktemp`
     date=`echo ${params.fastq_folder} | cut -d _ -f 1`
-    #prefix="${params.raw_path}/${params.fastq_folder}"
 
     ls ${seq_folder}/*.gz -1 | xargs -n1 basename | \
     awk -v date=\$date '{
@@ -360,24 +359,23 @@ process species_check {
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*.Rmd'
 
     input:
-        tuple path("seq_folder"), file("sample_sheet"), file("multiqc_samtools_stats"), file(report)
+        tuple path(seq_folder), file(sample_sheet), file(multiqc_samtools_stats), file(report)
 
     output:
         tuple file("*.tsv"), file("*.Rmd"), file("*.html")
 
     """
         # for some reason, tsv aren't being saved in r markdown, so get around with an R script
-        # echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" | cat - ${workflow.projectDir}/bin/species_check.R > species_check.R 
         Rscript --vanilla ${workflow.projectDir}/bin/species_check.R ${seq_folder} ${multiqc_samtools_stats} ${sample_sheet}
 
         # copy R markdown and insert date and pool
-        cat "${report}" | sed "s/FQ_HOLDER/${params.fastq_folder}/g" > species_check_${params.fastq_folder}.Rmd 
+        cat "${report}" | sed "s/FQ_HOLDER/${seq_folder}/g" > species_check_${seq_folder}.Rmd 
 
         # add R library path
         # echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
 
         # make markdown
-        Rscript -e "rmarkdown::render('species_check_${params.fastq_folder}.Rmd', knit_root_dir='${workflow.launchDir}')"
+        Rscript -e "rmarkdown::render('species_check_${seq_folder}.Rmd')"
 
     """
 

@@ -62,7 +62,7 @@ wi_all = bind_rows(ce_WI, cb_WI, ct_WI)
 ```{r, fig.width=17, fig.height=20}
 
 # read in multiqc data
-sc_stats <- read.delim(glue::glue("processFQ-{fq_folder}/multiqc_data/multiqc_samtools_stats.txt"), stringsAsFactors=FALSE) %>% 
+sc_stats <- read.delim("multiqc_samtools_stats.txt", stringsAsFactors=FALSE) %>% 
     dplyr::distinct() %>%
     dplyr::filter(Sample != "Sample") %>%
     tidyr::separate(Sample, c("sample","likely_species"), sep="_xxx_") %>% 
