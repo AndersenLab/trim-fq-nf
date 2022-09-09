@@ -14,13 +14,13 @@ if( !nextflow.version.matches('20+') ) {
     exit 1
 }
 
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
 //assert System.getenv("NXF_VER") == "20.01.0"
 
 // these aren't used??
-include md5sum as md5sum_pre from './md5.module.nf'
-include md5sum as md5sum_post from './md5.module.nf'
+//include md5sum as md5sum_pre from './md5.module.nf'
+//include md5sum as md5sum_post from './md5.module.nf'
 
 
 // read input
@@ -46,7 +46,7 @@ params.out="processFQ-${params.fastq_folder}"
 params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
 params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
 params.subsample_read_count = "10000"  
-md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
+//md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
 
 // required inputs
 if (params.fastq_folder == null) {
@@ -198,7 +198,7 @@ process screen_species {
     // conda "/projects/b1059/software/conda_envs/alignment-nf_env"
 
     input:
-        tuple val(sampleID), path(fq1), path(fq2), genome_row
+        tuple val(sampleID), path(fq1), path(fq2), val(genome_row)
 
     output:
         path("*.stats")
