@@ -42,9 +42,11 @@ if (params.debug) {
 
 }
 
-    params.out="processFQ-${params.fastq_folder}"
-
-
+params.out="processFQ-${params.fastq_folder}"
+params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
+params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
+params.subsample_read_count = "10000"  
+md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
 
 // required inputs
 if (params.fastq_folder == null) {
@@ -58,12 +60,6 @@ if (params.fastq_folder == null) {
         exit 1
     }
 }
-
-
-params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
-params.subsample_read_count = "10000"  
-md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
-//params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
 
 
 def log_summary() {
