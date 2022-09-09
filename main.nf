@@ -31,8 +31,8 @@ if (params.debug) {
 
     """
     params.raw_path="/projects/b1059/data/transfer/raw" 
-    params.fastq_folder="debug_trim"
-    //params.processed_path="${workflow.projectDir}/test_data/processed"
+    params.fastq_folder="2022_debugtrim"
+    params.processed_path="/projects/b1059/data/transfer/processed"
 
 } else {
 
@@ -122,7 +122,9 @@ println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
 workflow { 
 
     // create sample sheet
-    generate_sample_sheet()
+    Channel.fromPath("${params.raw_path}/${params.fastq_folder}").view() | generate_sample_sheet
+    
+    //generate_sample_sheet()
 
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
@@ -140,7 +142,8 @@ workflow {
 
         // run more species check and generate species-specific sample sheet
         generate_sample_sheet.out
-            .combine(multi_QC_species.out) | species_check
+            .combine(multi_QC_species.out) 
+            .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")) | species_check
     }
 
     // fastp trim
@@ -292,6 +295,9 @@ process generate_sample_sheet {
     
     publishDir "${params.out}", mode: 'copy'
 
+    input:
+        path(fq_folder)
+
     output:
         path("sample_sheet_${params.fastq_folder}_all_temp.tsv")
         
@@ -301,7 +307,7 @@ process generate_sample_sheet {
     date=`echo ${params.fastq_folder} | cut -d _ -f 1`
     prefix="${params.raw_path}/${params.fastq_folder}"
 
-    ls \${prefix}/*.gz -1 | xargs -n1 basename | \
+    ls ${fq_folder}/*.gz -1 | xargs -n1 basename | \
     awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\$date '{
         fq1 = \$1;
         fq2 = \$1;
@@ -325,7 +331,7 @@ process generate_sample_sheet {
     fi
 
     cat \${fq_sheet} | sort | sed '1 i\\strain\\tid\\tlb\\tfq1\\tfq2\\tseq_folder' > sample_sheet_${params.fastq_folder}_all_temp.tsv
-
+    
     """
 
 }
@@ -353,24 +359,20 @@ process species_check {
     publishDir "${params.out}/species_check/", mode: 'copy', pattern: '*.Rmd'
 
     input:
-        tuple file("sample_sheet"), file("multiqc_samtools_stats")
+        tuple file(sample_sheet), file(multiqc_samtools_stats), file(report)
 
     output:
         tuple file("*.tsv"), file("*.Rmd"), file("*.html")
 
     """
         # for some reason, tsv aren't being saved in r markdown, so get around with an R script
-        # echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" | cat - ${workflow.projectDir}/bin/species_check.R > species_check.R 
         Rscript --vanilla ${workflow.projectDir}/bin/species_check.R ${params.fastq_folder} ${multiqc_samtools_stats} ${sample_sheet}
 
         # copy R markdown and insert date and pool
-        cat "${workflow.projectDir}/bin/species_check.Rmd" | sed "s/FQ_HOLDER/${params.fastq_folder}/g" > species_check_${params.fastq_folder}.Rmd 
-
-        # add R library path
-        # echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
+        cat "${report}" | sed "s/FQ_HOLDER/${params.fastq_folder}/g" > species_check_${params.fastq_folder}.Rmd 
 
         # make markdown
-        Rscript -e "rmarkdown::render('species_check_${params.fastq_folder}.Rmd', knit_root_dir='${workflow.launchDir}')"
+        Rscript -e "rmarkdown::render('species_check_${params.fastq_folder}.Rmd')"
 
     """
 
