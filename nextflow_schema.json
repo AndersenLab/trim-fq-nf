@@ -1,0 +1,31 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://raw.githubusercontent.com/./master/nextflow_schema.json",
+    "title": "trim-fq-nf pipeline parameters",
+    "description": "",
+    "type": "object",
+    "definitions": {
+        "input_output": {
+            "title": "Input/Output",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "fastq_folder": {
+                    "type": "string",
+                    "default": null,
+                    "description": "This should be the name of the folder containing all fastq files located at /projects/b1059/data/transfer/raw/"
+                },
+                "debug": {
+                    "type": "boolean"
+                }
+            },
+            "fa_icon": "fas fa-terminal"
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/definitions/input_output"
+        }
+    ]
+}
