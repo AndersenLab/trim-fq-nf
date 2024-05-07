@@ -63,7 +63,7 @@ if (params.fastq_folder == null) {
 params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
 params.subsample_read_count = "10000"  
 md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
-//params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
+//params.R_libpath = "/data/eande106/software/R_lib_3.6.0"
 
 
 def log_summary() {
@@ -199,7 +199,7 @@ process fastp_trim {
 
 process screen_species {
 
-    // conda "/projects/b1059/software/conda_envs/alignment-nf_env"
+    // conda "/data/eande106/software/conda_envs/alignment-nf_env"
 
     input:
         tuple val(sampleID), path(fq1), path(fq2), genome_row
