@@ -30,14 +30,14 @@ if (params.debug) {
         *** Using debug mode ***
 
     """
-    params.raw_path="/projects/b1059/data/transfer/raw" 
+    params.raw_path="/vast/eande106/data/transfer/raw" 
     params.fastq_folder="2022_debugtrim"
-    params.processed_path="/projects/b1059/data/transfer/processed"
+    params.processed_path="/vast/eande106/data/transfer/processed"
 
 } else {
 
-    params.raw_path="/projects/b1059/data/transfer/raw"
-    params.processed_path="/projects/b1059/data/transfer/processed"
+    params.raw_path="/vast/eande106/data/transfer/raw"
+    params.processed_path="/vast/eande106/data/transfer/processed"
     //params.processed_path="/projects/b1059/data"
 
 }
