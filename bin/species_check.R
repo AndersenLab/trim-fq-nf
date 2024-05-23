@@ -167,6 +167,7 @@ for(ss in unique(fq_all$species)) {
         dplyr::filter(species == ss) %>%
         dplyr::select(-species) %>%
         dplyr::semi_join(fq_new, by="strain")
+    fq_new1 <- transform(fq_new1, seq_folder = as.character(seq_folder))
     fq_new2 <- fq_new %>%
         dplyr::bind_rows(fq_new1) %>% 
         unique() %>% 
