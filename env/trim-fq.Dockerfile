@@ -1,15 +1,19 @@
-FROM continuumio/miniconda
-MAINTAINER Katie Evans <kathryn.evans@northwestern.edu>
+FROM mambaorg/micromamba:1.5.0
+LABEL Author: Mike Sauria <mike.sauria@jhu.edu>
 
-COPY conda.yml .
+COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml .
 RUN \
-   conda env update -n root -f conda.yml \
-&& conda clean -a
+    micromamba install -n base -f conda.yml -y \
+	&& micromamba clean -a -y
 
-RUN Rscript -e "install.packages('roperators',dependencies=TRUE, repos='http://cran.us.r-project.org')"
-RUN Rscript -e "install.packages('fuzzyjoin', dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
-RUN Rscript -e "install.packages('tidyverse', dependencies = TRUE, repos = 'http://cran.us.r-project.org')"
+ARG MAMBA_DOCKERFILE_ACTIVATE=1
+
+RUN Rscript -e "install.packages('roperators', dependencies=TRUE, repos='http://cran.us.r-project.org')"
+
+USER root
 
 RUN apt-get --allow-releaseinfo-change update && \
 	apt-get install -y procps && \
 	rm -rf /var/lib/apt/lists/*
+
+USER $MAMBA_USER

@@ -5,22 +5,21 @@
     - Daniel Cook <danielecook@gmail.com>
     - Dan Lu <dan.lu@northwestern.edu>
     - Katie Evans <kathryn.evans@northwestern.edu>
+    - Mike Sauria <mike.sauria@jhu.edu>
 */
 
-// make sure nextflow version is 20+
-if( !nextflow.version.matches('20+') ) {
-    println "This workflow requires Nextflow version 20.0 or greater -- You are running version $nextflow.version"
-    println "On QUEST, you can use `module load python/anaconda3.6; source activate /projects/b1059/software/conda_envs/nf20_env`"
+// make sure nextflow version is 23+
+if( !nextflow.version.matches('23+') ) {
+    println "This workflow requires Nextflow version 23.0 or greater -- You are running version $nextflow.version"
+    println "On Rockfish, you can use `module load python/anaconda3.6; source activate /vast/eande106/software/conda_envs/nf23_env`"
     exit 1
 }
 
-nextflow.preview.dsl=2
-// NXF_VER=20.01.0" Require later version of nextflow
-//assert System.getenv("NXF_VER") == "20.01.0"
+nextflow.enable.dsl=2
 
 // these aren't used??
-include md5sum as md5sum_pre from './md5.module.nf'
-include md5sum as md5sum_post from './md5.module.nf'
+//include { md5sum as md5sum_pre } from './md5.module.nf'
+//include { md5sum as md5sum_post } from './md5.module.nf'
 
 
 // read input
@@ -30,19 +29,13 @@ if (params.debug) {
         *** Using debug mode ***
 
     """
-    params.raw_path="/projects/b1059/data/transfer/raw" 
-    params.fastq_folder="2022_debugtrim"
-    params.processed_path="/projects/b1059/data/transfer/processed"
-
-} else {
-
-    params.raw_path="/projects/b1059/data/transfer/raw"
-    params.processed_path="/projects/b1059/data/transfer/processed"
-    //params.processed_path="/projects/b1059/data"
+    params.raw_path="${workflow.projectDir}/test_data/raw" 
+    params.fastq_folder="MMDDYYYY_testrun"
+    params.processed_path="${workflow.launchDir}"
 
 }
 
-    params.out="processFQ-${params.fastq_folder}"
+params.out="processFQ-${params.fastq_folder}"
 
 
 
@@ -59,11 +52,22 @@ if (params.fastq_folder == null) {
     }
 }
 
+if ((params.raw_path == null) | (params.processed_path == null) | (params.genome_path == null)) {
+    if (params.help) {
+    } else {
+        println """
+
+        If running locally, please specify raw, processed, and genome paths manually with --raw_path, --processed_path, and --genome_path
+
+        """
+        exit 1
+    }
+}
+
 
 params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
 params.subsample_read_count = "10000"  
-md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
-//params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
+//md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
 
 
 def log_summary() {
@@ -93,6 +97,7 @@ nextflow main.nf --fastq_folder 20180405_fromNUSeq
     --trim                  Whether to trim fastq                         ${params.trim}
     --check_species         Whether to do species check                   ${params.check_species}
     --genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
+    --genome_path           Path to data in genome_sheet                  ${params.genome_path}
     --out                   Folder name to write results                  ${params.out}
     --subsample_read_count  How many reads to use for species check       ${params.subsample_read_count}
 
@@ -123,27 +128,27 @@ workflow {
 
     // create sample sheet
     Channel.fromPath("${params.raw_path}/${params.fastq_folder}").view() | generate_sample_sheet
+    generate_sample_sheet.out.view {"$it"}
     
-    //generate_sample_sheet()
-
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
                       .splitCsv(header:true, sep: "\t")
-
+                      .map { it ->  [species: it.species, genome: "$params.genome_path/$it.genome"] }
     fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
                 .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
                 .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1P,2P}.fq.gz", flat: true))
 
-
     // screen species
     if("${params.check_species}" == true) {
-    	fq.combine(genome_sheet) | screen_species
+    	fq.combine(genome_sheet)
+        .map { it -> [it[0], it[1], it[2], it[3].species, it[3].genome] } | screen_species
         screen_species.out.collect() | multi_QC_species
 
         // run more species check and generate species-specific sample sheet
         generate_sample_sheet.out
             .combine(multi_QC_species.out) 
-            .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")) | species_check
+            .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")).view {"$it" }
+            // | species_check
     }
 
     // fastp trim
@@ -199,29 +204,29 @@ process fastp_trim {
 
 process screen_species {
 
-    // conda "/projects/b1059/software/conda_envs/alignment-nf_env"
-
     input:
-        tuple val(sampleID), path(fq1), path(fq2), genome_row
+        tuple val(sampleID), path(fq1), path(fq2), val(species), path(genome)
 
     output:
         path("*.stats")
 
     """
+        INDEX=`find -L ./ -name "*.amb" | sed 's/\\.amb\$//'`
+        echo \$INDEX
         zcat ${fq1} | head -n ${params.subsample_read_count} > subset_R1.fq
         zcat ${fq2} | head -n ${params.subsample_read_count} > subset_R2.fq
-        bwa mem -t ${task.cpus} ${genome_row.genome} subset_R1.fq subset_R2.fq > out.sam
+        bwa mem -t ${task.cpus} \${INDEX} subset_R1.fq subset_R2.fq > out.sam
 
         samtools sort -o sorted.bam out.sam
         samtools index sorted.bam
 
         picard MarkDuplicates I=sorted.bam \\
                               O=rm_dup.bam \\
-                              M=${sampleID}_xxx_${genome_row.species}.duplicates.txt \\
+                              M=${sampleID}_xxx_${species}.duplicates.txt \\
                               VALIDATION_STRINGENCY=LENIENT \\
                               REMOVE_DUPLICATES=true
 
-        samtools stats rm_dup.bam > ${sampleID}_xxx_${genome_row.species}.stats
+        samtools stats rm_dup.bam > ${sampleID}_xxx_${species}.stats
 
         rm *.fq
         rm *.bam
@@ -239,7 +244,7 @@ process screen_species {
 
 process multi_QC_trim {
 
-    // this process uses a different conatiner than the others
+    // this process uses a different container than the others
     container 'andersenlab/multiqc:2022030115492310c8da'
 
     publishDir "${params.out}/multi_QC", mode: 'copy'
@@ -268,6 +273,7 @@ process multi_QC_trim {
 
 process multi_QC_species {
 
+    // this process uses a different container than the others
     container 'andersenlab/multiqc:2022030115492310c8da'
 
     publishDir "${params.out}", mode: 'copy'
@@ -307,25 +313,42 @@ process generate_sample_sheet {
     date=`echo ${params.fastq_folder} | cut -d _ -f 1`
     prefix="${params.raw_path}/${params.fastq_folder}"
 
-    ls ${fq_folder}/*.gz -1 | xargs -n1 basename | \
-    awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\$date '{
-        fq1 = \$1;
-        fq2 = \$1;
-        gsub("R1_001.fastq.gz", "R2_001.fastq.gz", fq2);
-        gsub("R1_001.fastq.gz", "1P.fq.gz", fq1);
-        gsub("R2_001.fastq.gz", "2P.fq.gz", fq2);
-        split(\$0, a, "_");
-        SM = a[1];
-        split(\$0, b, "_R");
-        ID = b[1];
-        gsub("\$", "_", ID);
-        gsub("\$", date, ID);
-        LB = b[1]
-        gsub("\$", "_", LB);
-        gsub("\$", date, LB);
-        print SM"\\t"ID"\\t"LB"\\t"fq1"\\t"fq2"\\t"seq_folder
-    }' | sed -n '1~2p' >> \${fq_sheet}
-
+    ls ${fq_folder}/*.gz -1 | xargs -n1 basename | \\
+    awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\${date} \\
+    'BEGIN{OFS="\\t"}
+    {
+        if ((\$1 ~ /.*R1_[0-9]+\\.fastq\\.gz\$/)){
+            fq1 = \$1;
+            gsub(/R1_[0-9]+\\.fastq/,"1P.fq", fq1);
+            fq2 = fq1;
+            gsub(/1P.fq/, "2P.fq", fq2);
+            valid = "True";
+        } else if ((\$1 ~ /.*_1\\.fq\\.gz\$/)){
+            fq1 = \$1;
+            gsub(/1\\.fq/,"1P.fq", fq1);
+            fq2 = fq1;
+            gsub(/1P\\.fq/, "2P.fq", fq2);
+            valid = "True";
+        } else if ((\$1 ~ /.*1P\\.fq\\.gz\$/)){
+            fq1 = \$1;
+            fq2 = fq1;
+            gsub(/1P\\.fq/, "2P.fq", fq2);
+            valid = "True";
+        } else
+            valid = "False";
+        if (valid == "True"){
+            split(fq1, a, "_");
+            SM = a[1];
+            split(fq1, b, "_1P");
+            ID = b[1];
+            gsub("\$", "_", ID);
+            gsub("\$", date, ID);
+            LB = b[1];
+            gsub("\$", "_", LB);
+            gsub("\$", date, LB);
+            print SM,ID,LB,fq1,fq2;
+        }
+    }' >> \${fq_sheet}
     if [[ \$(cut -f 2 \${fq_sheet} | sort | uniq -c | grep -v '1 ') ]]; then
         >&2 echo "There are duplicate IDs in the sample sheet. Please review 'inventory.error'"
     fi
@@ -402,6 +425,7 @@ workflow.onComplete {
     --trim                      ${params.trim}
     --check_species             ${params.check_species}
     --genome_sheet              ${params.genome_sheet}
+    --genome_path               ${params.genome_path}
     --out                       ${params.out}
     --subsample_read_count      ${params.subsample_read_count}
 

@@ -1,5 +1,5 @@
 .nextflow*
-test_data/
-ANALYSIS/*
-pipeline_info/*
+ANALYSIS*
+pipeline_info*
 processFQ*
+work*
