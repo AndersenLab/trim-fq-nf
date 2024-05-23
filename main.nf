@@ -29,10 +29,13 @@ if (params.debug) {
         *** Using debug mode ***
 
     """
-    params.raw_path="${workflow.projectDir}/test_data/raw" 
+    params.raw_path_final="${workflow.projectDir}/test_data/raw" 
     params.fastq_folder="MMDDYYYY_testrun"
-    params.processed_path="${workflow.launchDir}"
+    params.processed_path_final="${workflow.launchDir}/processed"
 
+} else {
+    params.raw_path_final = params.raw_path
+    params.processed_path_final = params.processed_path
 }
 
 params.out="processFQ-${params.fastq_folder}"
@@ -52,7 +55,7 @@ if (params.fastq_folder == null) {
     }
 }
 
-if ((params.raw_path == null) | (params.processed_path == null) | (params.genome_path == null)) {
+if ((params.raw_path_final == null) | (params.processed_path_final == null) | (params.genome_path == null)) {
     if (params.help) {
     } else {
         println """
@@ -67,7 +70,7 @@ if ((params.raw_path == null) | (params.processed_path == null) | (params.genome
 
 params.genome_sheet = "${workflow.projectDir}/bin/genome_sheet.tsv"
 params.subsample_read_count = "10000"  
-//md5sum_path = "${params.processed_path}/${params.fastq_folder}/md5sums.txt"
+//md5sum_path = "${params.processed_path_final}/${params.fastq_folder_final}/md5sums.txt"
 
 
 def log_summary() {
@@ -92,8 +95,8 @@ nextflow main.nf --fastq_folder 20180405_fromNUSeq
     ==========              ===========                                   ========================
     --debug                 Use --debug to indicate debug mode            ${params.debug}
     --fastq_folder          Name of the raw fastq folder                  ${params.fastq_folder}
-    --raw_path              Path to raw fastq folder                      ${params.raw_path}
-    --processed_path        Path to processed fastq folder (output)       ${params.processed_path}
+    --raw_path              Path to raw fastq folder                      ${params.raw_path_final}
+    --processed_path        Path to processed fastq folder (output)       ${params.processed_path_final}
     --trim                  Whether to trim fastq                         ${params.trim}
     --check_species         Whether to do species check                   ${params.check_species}
     --genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
@@ -120,23 +123,23 @@ if (params.help) {
 }
 
 
-println "Running fastp trimming on ${params.raw_path}/${params.fastq_folder}"
+println "Running fastp trimming on ${params.raw_path_final}/${params.fastq_folder}"
 
 
 
 workflow { 
 
     // create sample sheet
-    Channel.fromPath("${params.raw_path}/${params.fastq_folder}").view() | generate_sample_sheet
+    Channel.fromPath("${params.raw_path_final}/${params.fastq_folder}").view() | generate_sample_sheet
     generate_sample_sheet.out.view {"$it"}
     
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
                       .splitCsv(header:true, sep: "\t")
                       .map { it ->  [species: it.species, genome: "$params.genome_path/$it.genome"] }
-    fq = Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
-                .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
-                .concat(Channel.fromFilePairs("${params.raw_path}/${params.fastq_folder}/*_{1P,2P}.fq.gz", flat: true))
+    fq = Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
+                .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
+                .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1P,2P}.fq.gz", flat: true))
 
     // screen species
     if("${params.check_species}" == true) {
@@ -171,7 +174,7 @@ process fastp_trim {
 
     tag { sampleID }
 
-    publishDir "${params.processed_path}/${params.fastq_folder}", mode: 'copy', pattern: "*.fq.gz"
+    publishDir "${params.processed_path_final}/${params.fastq_folder}", mode: 'copy', pattern: "*.fq.gz"
 
     publishDir "${params.out}/multi_QC", mode: 'copy', pattern: "*_fastp.html"
 
@@ -311,7 +314,7 @@ process generate_sample_sheet {
     """
     fq_sheet=`mktemp`
     date=`echo ${params.fastq_folder} | cut -d _ -f 1`
-    prefix="${params.raw_path}/${params.fastq_folder}"
+    prefix="${params.raw_path_final}/${params.fastq_folder}"
 
     ls ${fq_folder}/*.gz -1 | xargs -n1 basename | \\
     awk -v prefix=\${prefix} -v seq_folder=${params.fastq_folder} -v date=\${date} \\
@@ -420,8 +423,8 @@ workflow.onComplete {
     ---------------------------
     --debug                     ${params.debug}
     --fastq_folder              ${params.fastq_folder}
-    --raw_path                  ${params.raw_path}
-    --processed_path            ${params.processed_path}
+    --raw_path                  ${params.raw_path_final}
+    --processed_path            ${params.processed_path_final}
     --trim                      ${params.trim}
     --check_species             ${params.check_species}
     --genome_sheet              ${params.genome_sheet}
