@@ -152,8 +152,7 @@ workflow {
         // run more species check and generate species-specific sample sheet
         generate_sample_sheet.out
             .combine(multi_QC_species.out) 
-            .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")).view {"$it" }
-            // | species_check
+            .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")) | species_check
     }
 
     // fastp trim
