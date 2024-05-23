@@ -163,6 +163,7 @@ write.table(fq_all, glue::glue("{date_label}_fq_sheet_all.tsv"), sep="\t", quote
 for(ss in unique(fq_all$species)) {
     # get all fastq for strains in this pool
     fq_new <- get(glue::glue("{ss}_new"))
+    fq_new <- transform(fq_new, seq_folder = as.character(seq_folder))
     fq_new1 <- fq_all %>%
         dplyr::filter(species == ss) %>%
         dplyr::select(-species) %>%
