@@ -136,7 +136,9 @@ workflow {
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
                       .splitCsv(header:true, sep: "\t")
-                      .map { it ->  [species: it.species, genome: "$params.genome_path/$it.genome"] }
+                      .map { it ->  [species: it.species, \
+                                     genome_path: "$params.genome_path/$it.genome".substring(0, "$params.genome_path/$it.genome".lastIndexOf("/")), \
+                                     genome_basename: "$it.genome".substring("$it.genome".lastIndexOf("/") + 1)] }
     fq = Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
                 .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
                 .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1P,2P}.fq.gz", flat: true))
@@ -144,7 +146,7 @@ workflow {
     // screen species
     if("${params.check_species}" == true) {
     	fq.combine(genome_sheet)
-        .map { it -> [it[0], it[1], it[2], it[3].species, it[3].genome] } | screen_species
+        .map { it -> [it[0], it[1], it[2], it[3].species, it[3].genome_path, it[3].genome_basename] } | screen_species
         screen_species.out.collect() | multi_QC_species
 
         // run more species check and generate species-specific sample sheet
@@ -208,13 +210,13 @@ process fastp_trim {
 process screen_species {
 
     input:
-        tuple val(sampleID), path(fq1), path(fq2), val(species), path(genome)
+        tuple val(sampleID), path(fq1), path(fq2), val(species), path(genome), val(basename)
 
     output:
         path("*.stats")
 
     """
-        INDEX=`find -L ./ -name "*.amb" | sed 's/\\.amb\$//'`
+        INDEX=`find -L ${genome} -name "${basename}.amb" | sed 's/\\.amb\$//'`
         echo \$INDEX
         zcat ${fq1} | head -n ${params.subsample_read_count} > subset_R1.fq
         zcat ${fq2} | head -n ${params.subsample_read_count} > subset_R2.fq
