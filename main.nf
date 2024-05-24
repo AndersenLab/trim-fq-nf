@@ -136,14 +136,18 @@ workflow {
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
                       .splitCsv(header:true, sep: "\t")
-                      .map { it ->  [species: it.species, index: "$params.genome_path/$it.genome"] }
+                      .map { it ->  [species: it.species, \
+                                     genome_path: "$params.genome_path/$it.genome".substring(0, "$params.genome_path/$it.genome".lastIndexOf("/")), \
+                                     genome_basename: "$it.genome".substring("$it.genome".lastIndexOf("/") + 1)] }
+
     fq = Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
                 .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
                 .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1P,2P}.fq.gz", flat: true))
 
     // screen species
     if("${params.check_species}" == true) {
-    	fq.combine(genome_sheet) | screen_species
+    	fq.combine(genome_sheet)
+        .map { it -> [it[0], it[1], it[2], it[3].species, it[3].genome_path, it[3].genome_basename] } | screen_species
         screen_species.out.collect() | multi_QC_species
 
         // run more species check and generate species-specific sample sheet
@@ -152,7 +156,7 @@ workflow {
             .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")) | species_check
     }
 
-    fastp trim
+    // fastp trim
     if("${params.trim}" == true) {
     	fq | fastp_trim
         fastp_trim.out.fastp_json.collect() | multi_QC_trim
@@ -206,14 +210,13 @@ process fastp_trim {
 process screen_species {
 
     input:
-        tuple val(sampleID), path(fq1), path(fq2), val(genome)
+        tuple val(sampleID), path(fq1), path(fq2), val(species), path(genome), val(basename)
 
     output:
         path("*.stats")
 
     """
-        INDEX=`realpath ${genome.index}`
-        echo \$INDEX
+        INDEX=`find -L ${genome} -name "${basename}.amb" | sed 's/\\.amb\$//'`
         zcat ${fq1} | head -n ${params.subsample_read_count} > subset_R1.fq
         zcat ${fq2} | head -n ${params.subsample_read_count} > subset_R2.fq
         bwa mem -t ${task.cpus} \${INDEX} subset_R1.fq subset_R2.fq > out.sam
@@ -223,11 +226,11 @@ process screen_species {
 
         picard MarkDuplicates I=sorted.bam \\
                               O=rm_dup.bam \\
-                              M=${sampleID}_xxx_${genome.species}.duplicates.txt \\
+                              M=${sampleID}_xxx_${species}.duplicates.txt \\
                               VALIDATION_STRINGENCY=LENIENT \\
                               REMOVE_DUPLICATES=true
 
-        samtools stats rm_dup.bam > ${sampleID}_xxx_${genome.species}.stats
+        samtools stats rm_dup.bam > ${sampleID}_xxx_${species}.stats
 
         rm *.fq
         rm *.bam
