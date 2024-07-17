@@ -43,18 +43,18 @@ module load python/anaconda
 source activate /data/eande106/software/conda_envs/nf23_env
 ```
 
-[!Note]
-All FASTQs should end with a `_R[1|2]_001.fastq.gz` or a `_[1|2].fq.gz`. You can rename FASTQs using the rename command:  
-```
-for I in *.fq.gz; do
-	mv $I $(echo $I | sed -e "s/_1/_R1_001/" -e "s/_2/_R2_001/" -e "s/fq/fastq/");
-done
-```
+>[!Note]
+>All FASTQs should end with a `_R[1|2]_001.fastq.gz` or a `_[1|2].fq.gz`. You can rename FASTQs using the rename command:  
+>```
+>for I in *.fq.gz; do
+>	mv $I $(echo $I | sed -e "s/_1/_R1_001/" -e "s/_2/_R2_001/" -e "s/fq/fastq/");
+>done
+>```
 
 ### Relevant Docker Images
 
-[!Note]
-Before 20220301, this pipeline was run using existing conda environments on QUEST. However, these have since been migrated to docker images to allow for better control and reproducibility across platforms. If you need to access the conda version, you can always run an old commit with `nextflow run andersenlab/alignment-nf -r 20220216-Release`
+>[!Note]
+>Before 20220301, this pipeline was run using existing conda environments on QUEST. However, these have since been migrated to docker images to allow for better control and reproducibility across platforms. If you need to access the conda version, you can always run an old commit with `nextflow run andersenlab/alignment-nf -r 20220216-Release`
 
 * `andersenlab/trim-fq` ([link](https://hub.docker.com/r/andersenlab/trim-fq)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/trim-fq.Dockerfile` or `.github/workflows/build_trimfq_docker.yml` GitHub actions will create a new docker image and push if successful
 * `andersenlab/multiqc` ([link](https://hub.docker.com/r/andersenlab/multiqc)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/multiqc.Dockerfile` or `.github/workflows/build_multiqc_docker.yml` GitHub actions will create a new docker image and push if successful
@@ -65,13 +65,13 @@ Make sure that you add the following code to your `~/.bash_profile`. This line m
 # add singularity cache
 export SINGULARITY_CACHEDIR='/vast/eande106/singularity/'
 ```
-[!Note]
-If you need to work with the docker container, you will need to create an interactive session as singularity can't be run on Rockfish login nodes.  
-```
-interact -n1 -pexpress
-module load singularity
-singularity shell [--bind local_dir:container_dir] /vast/eande106/<image_name>
-```
+>[!Note]
+>If you need to work with the docker container, you will need to create an interactive session as singularity can't be run on Rockfish login nodes.  
+>```
+>interact -n1 -pexpress
+>module load singularity
+>singularity shell [--bind local_dir:container_dir] /vast/eande106/<image_name>
+>```
 
 # Usage
 
@@ -93,8 +93,8 @@ nextflow run -latest andersenlab/trim-fq-nf --debug
 nextflow run -latest andersenlab/trim-fq-nf --fastq_folder <name_of_folder>
 ```
 
-[!Important]
-The pipeline expects the folder containing raw fastq files to be located at `/vast/eande106/data/transfer/raw/`. And all processed fastq files will be output to `/vast/eande106/data/transfer/processed/`
+>[!Important]
+>The pipeline expects the folder containing raw fastq files to be located at `/vast/eande106/data/transfer/raw/`. And all processed fastq files will be output to `/vast/eande106/data/transfer/processed/`
 
 
 # Profiles
@@ -223,8 +223,8 @@ If a species check is run, the `species_check/sample_sheet` folder will also con
 
 * `sample_sheet/sample_sheet_{species}_{date}_NEW.tsv` - sample sheet for `alignment-nf` using all fastq from any library for ONLY strains sequenced in this particular library of a particular species (i.e. c_elegans, RET63). This is useful when the reference genome does not change and there is no need to re-align thousands of strains to save on computational power.
 
-[!Note]
-The "new" sample sheet will still contain old fastq sequenced in a previous pool (i.e. RET55) if that strain was re-sequenced in the current pool (i.e. RET63). After running `alignment-nf`, this will create a new BAM file incorporating all fastq for that strain.
+>[!Note]
+>The "new" sample sheet will still contain old fastq sequenced in a previous pool (i.e. RET55) if that strain was re-sequenced in the current pool (i.e. RET63). After running `alignment-nf`, this will create a new BAM file incorporating all fastq for that strain.
 
 # Data storage
 
