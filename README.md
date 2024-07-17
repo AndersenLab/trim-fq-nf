@@ -1,122 +1,155 @@
 ![Build Docker (env/trim-fq.Dockerfile)](https://github.com/AndersenLab/trim-fq-nf/workflows/Build%20Docker%20(env/trim-fq.Dockerfile)/badge.svg)    ![Build Docker (env/multiqc.Dockerfile)](https://github.com/AndersenLab/trim-fq-nf/workflows/Build%20Docker%20(env/multiqc.Dockerfile)/badge.svg)
 
-
 # trim-fq-nf
 
-### Typical use for debugging:
+The [trim-fq-nf](https://github.com/AndersenLab/trim-fq-nf) workflow performs FASTQ trimming to remove poor quality sequences and technical sequences such as adapters. It should be used with high-coverage genomic DNA. You should not use the trim-fq-nf workflow on low-coverage NIL or RIL data. Recent updates in 2021 also include running a species check on the FASTQ and generating a sample sheet of high-quality, species-confirmed samples for [alignment](https://github.com/AndersenLab/alignment-nf).
 
-```
-nextflow main.nf --debug
-```
+# Pipeline overview
 
-### Typical use for new fastq:
-```
-nextflow main.nf --fastq_folder 20180405_fromNUSeq
-```
-
-### Parameters
-   
 ```
 
 ____           .__                     _____                            _____ 
-_/  |_ _______ |__|  _____           _/ ____\\  ______           ____  _/ ____\\
-\\   __\\\\_  __ \\|  | /     \\   ______ \\   __\\  / ____/  ______  /    \\ \\   __\\ 
- |  |   |  | \\/|  ||  Y Y  \\ /_____/  |  |   < <_|  | /_____/ |   |  \\ |  |   
- |__|   |__|   |__||__|_|  /          |__|    \\__   |         |___|  / |__|   
-                         \\/                      |__|              \\/         
-                                                                              
+_/  |_ _______ |__|  _____           _/ ____\  ______           ____  _/ ____\
+\   __\\_  __ \|  | /     \   ______ \   __\  / ____/  ______  /    \ \   __\ 
+ |  |   |  | \/|  ||  Y Y  \ /_____/  |  |   < <_|  | /_____/ |   |  \ |  |   
+ |__|   |__|   |__||__|_|  /          |__|    \__   |         |___|  / |__|   
+						 \/                      |__|              \/         
+																			  
 
-    parameters              description                                   Set/Default
-    ==========              ===========                                   ========================
-    --debug                 Use --debug to indicate debug mode            ${params.debug}
-    --fastq_folder          Name of the raw fastq folder                  ${params.fastq_folder}
-    --raw_path              Path to raw fastq folder                      ${params.raw_path}
-    --processed_path        Path to processed fastq folder (output)       ${params.processed_path}
-    --genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
-    --out                   Folder name to write results                  ${params.out}
-    --subsample_read_count  How many reads to use for species check       ${params.subsample_read_count}
-    
+	parameters              description                                   Set/Default
+	==========              ===========                                   ========================
+	--debug                 Use --debug to indicate debug mode            ${params.debug}
+	--fastq_folder          Name of the raw fastq folder                  ${params.fastq_folder}
+	--raw_path              Path to raw fastq folder                      ${params.raw_path}
+	--processed_path        Path to processed fastq folder (output)       ${params.processed_path}
+	--genome_sheet          File with fasta locations for species check   ${params.genome_sheet}
+	--out                   Folder name to write results                  ${params.out}
+	--subsample_read_count  How many reads to use for species check       ${params.subsample_read_count}
+	
 ```
 
+
+* You have downloaded FASTQ Data to a subdirectory within a raw directory. For wild isolates this will be `/vast/eande106/data/transfer/raw/<folder_name>`
+* FASTQs __must__ end in a `.fq.gz` extension for the pipeline to work.
+* You have modified FASTQ names if necessary to add strain names or other identifying information.
+* You have installed software-requirements (see below for more info)
 
 ## Software requirements
 
-* Nextflow v20.01+ (see the dry guide on Nextflow [here](quest-nextflow.md) or the Nextflow documentation [here](https://www.nextflow.io/docs/latest/getstarted.html)). On QUEST, you can access this version by loading the `nf20` conda environment prior to running the pipeline command:
+* Nextflow v23+ (see the dry guide on Nextflow [here](../rockfish/rf-nextflow.md) or the Nextflow documentation [here](https://www.nextflow.io/docs/latest/getstarted.html)). On Rockfish, you can access this version by loading the `nf23_env` conda environment prior to running the pipeline command:
 
 ```
-module load python/anaconda3.6
-source activate /projects/b1059/software/conda_envs/nf20_env
+module load python/anaconda
+source activate /data/eande106/software/conda_envs/nf23_env
 ```
 
-* Docker - this pipeline uses three separate docker images: 1) `andersenlab/trim-fq` and 2) `andersenlab/multiqc` which are both generated as part of this repo (`env/trim-fq.Dockerfile` for example). Check out the [dry guide](http://andersenlab.org/dry-guide/2021-12-01/pipeline-docker/) for more info. This pipeline also uses the `andersenlab/r_packages` container for all R work, which is hosted and generated [separately](https://github.com/AndersenLab/dockerfile/tree/master/r_packages).
-    - If you are on QUEST, you can load docker (actually singularity) with:
+!!! Note
+	All FASTQs should end with a `_R[1|2]_001.fastq.gz` or a `_[1|2].fq.gz`. You can rename FASTQs using the rename command:
+
+	```
+	for I in *.fq.gz; do
+		mv $I $(echo $I | sed -e "s/_1/_R1_001/" -e "s/_2/_R2_001/" -e "s/fq/fastq/");
+	done
+	```
+
+### Relevant Docker Images
+
+!!! Note
+	Before 20220301, this pipeline was run using existing conda environments on QUEST. However, these have since been migrated to docker images to allow for better control and reproducibility across platforms. If you need to access the conda version, you can always run an old commit with `nextflow run andersenlab/alignment-nf -r 20220216-Release`
+
+* `andersenlab/trim-fq` ([link](https://hub.docker.com/r/andersenlab/trim-fq)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/trim-fq.Dockerfile` or `.github/workflows/build_trimfq_docker.yml` GitHub actions will create a new docker image and push if successful
+* `andersenlab/multiqc` ([link](https://hub.docker.com/r/andersenlab/multiqc)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/multiqc.Dockerfile` or `.github/workflows/build_multiqc_docker.yml` GitHub actions will create a new docker image and push if successful
+
+Make sure that you add the following code to your `~/.bash_profile`. This line makes sure that any singularity images you download will go to a shared location on `/vast/eande106` for other users to take advantage of (without them also having to download the same image).
 
 ```
-module load singularity
+# add singularity cache
+export SINGULARITY_CACHEDIR='/vast/eande106/singularity/'
 ```
-
-**Note: As of 2022-01-01, the conda environments that used to host this pipeline will no longer be maintained**
+!!! Note
+	If you need to work with the docker container, you will need to create an interactive session as singularity can't be run on Rockfish login nodes.
+	
+	```
+	interact -n1 -pexpress
+	module load singularity
+	singularity shell [--bind local_dir:container_dir] /vast/eande106/<image_name>
+	```
 
 # Usage
 
-## Testing the pipeline on QUEST
+## Testing the pipeline on Rockfish
+
+To see the running options and verify that paths are set correctly, you can use the `--help` parameter to see parameter settings.
+
+```
+nextflow run -latest andersenlab/trim-fq-nf --debug
+```
 
 *This command uses a test dataset*
 
-```
-nextflow run main.nf --debug
-```
+## Running the pipeline on Rockfish
 
-## Running the pipeline on QUEST
+*Note: if you are having issues running Nextflow or need reminders, check out the [Nextflow](quest-nextflow.md) page.*
 
 ```
-nextflow run main.nf --fastq_folder <name_of_folder>
+nextflow run -latest andersenlab/trim-fq-nf --fastq_folder <name_of_folder>
 ```
+
+!!! Important
+	The pipeline expects the folder containing raw fastq files to be located at `/vast/eande106/data/transfer/raw/`. And all processed fastq files will be output to `/vast/eande106/data/transfer/processed/`
+
 
 # Profiles
 
-## -profile standard (Default)
+## -profile rockfish (Default)
 
-If no profile is designated, the default profile will run both fastq trimming AND species check
+If no profile is designated, the rockfish profile will run
 
-## -profile trim_only
+## -profile quest
 
-Use this profile to only trim fastq files and not perform species check.
-
-## -profile sp_check_only
-
-Use this profile to only run species check and not fastq trimming. This is useful for running species checks on previously trimmed fastqs.
+This profile sets parameters for the Quest computing center
 
 # Parameters
 
+## --help
+
+This will print out all required and optional parameters along with their current values and then exit.
+
 ## --debug
 
-You should use `--debug true` for testing/debugging purposes. This will run the debug test set (located in the `test_data/raw` folder).
+You should use `--debug` for testing/debugging purposes. This will run the debug test set (located in the `test_data/raw` folder).
 
 For example:
 
 ```
-nextflow run main.nf --debug -resume
+nextflow run andersenlab/trim-fq-nf --debug -resume
 ```
 
 Using `--debug` will automatically set the fastq_folder to `test_data/raw/20210406_test1`
 
+## --trim false
+
+This will cause the workflow to skip the fastq trimming
+
+## --species_check false
+
+This will cause the workflow to skip the species check
+
 ## --fastq_folder
 
-This should be the name of the folder containing all fastq files located at `/projects/b1059/data/transfer/raw/`. As long as there are no overlapping file names (be sure to check this first), you can combine multiple pools sequenced at the same time into one larger folder at this step.
+This should be the name of the folder containing all fastq files located at `/vast/eande106/data/transfer/raw/`. As long as there are no overlapping file names (be sure to check this first), you can combine multiple pools sequenced at the same time into one larger folder at this step.
 
 ### --raw_path (optional)
 
-The path to the `fastq_folder` if not default (`/projects/b1059/data/transfer/raw/`)
+The path to the `fastq_folder` if not default (`/vast/eande106/data/transfer/raw/`)
 
 ### --processed_path (optional)
 
-The path to output folder if not default (`/projects/b1059/data/transfer/processed/`)
-
+The path to output folder if not default (`/vast/eande106/data/transfer/processed/`)
 
 ### --genome_sheet (optional)
 
-Path to a tsv file listing project IDs for species. Default is located in `bin/genome_sheet.tsv`
+Path to a tsv file listing project IDs for species. Default is located in `trim-fq-nf/bin/genome_sheet.tsv`
 
 ### --out (optional)
 
@@ -130,7 +163,7 @@ How many reads to use for species check. Default = 10,000
 # Output
 
 ```
-├── b1059/data/transfer/processed/
+├── /vast/eande106/data/transfer/processed/
 │   └── {strain}_{library}_{read}.fq.gz
 - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ├── multi_QC
@@ -155,7 +188,7 @@ How many reads to use for species check. Default = 10,000
 └── log.txt
 ```
 
-The resulting trimmed FASTQs will be output in the `b1059/data/transfer/processed` directory. The rest of the output files and reports will be generated in a new folder in the directory in which you ran the nextflow pipeline, labeled by `processFQ-{fastq_folder}`.
+The resulting trimmed FASTQs will be output in the `/vast/eande106/data/transfer/processed` directory. The rest of the output files and reports will be generated in a new folder in the directory in which you ran the nextflow pipeline, labeled by `processFQ-{fastq_folder}`.
 
 __MultiQC__
 
@@ -192,7 +225,54 @@ If a species check is run, the `species_check/sample_sheet` folder will also con
 
 * `sample_sheet/sample_sheet_{species}_{date}_NEW.tsv` - sample sheet for `alignment-nf` using all fastq from any library for ONLY strains sequenced in this particular library of a particular species (i.e. c_elegans, RET63). This is useful when the reference genome does not change and there is no need to re-align thousands of strains to save on computational power.
 
-# Relevant Docker Images
+!!! Note
+		The "new" sample sheet will still contain old fastq sequenced in a previous pool (i.e. RET55) if that strain was re-sequenced in the current pool (i.e. RET63). After running `alignment-nf`, this will create a new BAM file incorporating all fastq for that strain.
 
-* `andersenlab/trim-fq` ([link](https://hub.docker.com/r/andersenlab/trim-fq)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/trim-fq.Dockerfile` or `.github/workflows/build_trimfq_docker.yml` GitHub actions will create a new docker image and push if successful
-* `andersenlab/multiqc` ([link](https://hub.docker.com/r/andersenlab/multiqc)): Docker image is created within this pipeline using GitHub actions. Whenever a change is made to `env/multiqc.Dockerfile` or `.github/workflows/build_multiqc_docker.yml` GitHub actions will create a new docker image and push if successful
+# Data storage
+
+## Backup
+
+Once you have completed the trim-fq-nf pipeline you should backup the **raw** FASTQs. More information on this is available in the [backup](../other/backup.md)
+
+## Poor quality data
+
+If you observe poor quality sequence data you should notify Robyn through the appropriate channels and then remove the data from further analysis.
+
+## Cleanup
+
+If you have triple-checked everything and are satisfied with the results, the original **raw** sequence data can be deleted. The **processed** sequence data (FASTQ files) should be moved to their appropriate location, split by species (`/vast/eande106/data/{species}/WI/fastq/dna/`). The following line can be used to move processed fastq prior to running `alignment-nf`:
+
+```
+
+# change directories into the folder containing the processed fastq files
+cd /vast/eande106/data/transfer/processed/20210510_RET63/
+
+# move files one species at a time (might be a more efficient line of code for this, but it works...)
+# !!!! make sure to change the file name !!!!!
+
+# file name ~ - ~ CHANGE THIS ~ - ~
+file='/vast/eande106/Katie/trim-fq-nf/20210510_RET63/species_check/sample_sheet/sample_sheet_c_tropicalis_20201222a_NEW.tsv'
+
+# species
+sp="c_`echo $file | xargs -n1 basename | awk -F[__] '{print $4}'`"
+
+# get list of files to move from file
+awk NR\>1 $file > temp.tsv
+cat temp.tsv | awk '{print $4}' > files_to_move.txt
+cat temp.tsv | awk '{print $5}' >> files_to_move.txt
+
+# move files
+cat files_to_move.txt | while read line 
+do
+	 mv $line /vast/eande106/data/$sp/WI/fastq/dna/
+done
+
+# remove temp file
+rm files_to_move.txt
+rm temp.tsv
+
+```
+
+!!! Note
+	The sample sheets ONLY contain strains that species in record matches most likely species by sequencing. If, after moving all the FASTQ for each species to their proper folder, you have FASTQ remaining, these are likely to be found in `strains_possibly_diff_species.tsv`. You should notify Robyn and Erik about these strains through the appropriate channels and delete the FASTQ or move to another temporary location until it can be re-sequenced.
+
