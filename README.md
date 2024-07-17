@@ -271,6 +271,6 @@ rm temp.tsv
 
 ```
 
-[!Note]
-The sample sheets ONLY contain strains that species in record matches most likely species by sequencing. If, after moving all the FASTQ for each species to their proper folder, you have FASTQ remaining, these are likely to be found in `strains_possibly_diff_species.tsv`. You should notify Robyn and Erik about these strains through the appropriate channels and delete the FASTQ or move to another temporary location until it can be re-sequenced.
+>[!Note]
+>The sample sheets ONLY contain strains that species in record matches most likely species by sequencing. If, after moving all the FASTQ for each species to their proper folder, you have FASTQ remaining, these are likely to be found in `strains_possibly_diff_species.tsv`. You should notify Robyn and Erik about these strains through the appropriate channels and delete the FASTQ or move to another temporary location until it can be re-sequenced.
 
