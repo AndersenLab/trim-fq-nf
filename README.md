@@ -11,7 +11,7 @@ The [trim-fq-nf](https://github.com/AndersenLab/trim-fq-nf) workflow performs FA
 ____           .__                     _____                            _____ 
 _/  |_ _______ |__|  _____           _/ ____\  ______           ____  _/ ____\
 \   __\\_  __ \|  | /     \   ______ \   __\  / ____/  ______  /    \ \   __\ 
- |  |   |  | \/|  ||  Y Y  \ /_____/  |  |   < <_|  | /_____/ |   |  \ |  |   
+ |  |   |  | \/|  ||  Y Y  \ /_____/  |  |   | |_|  | /_____/ |   |  \ |  |   
  |__|   |__|   |__||__|_|  /          |__|    \__   |         |___|  / |__|   
                          \/                      |__|              \/         
 																			  
@@ -36,7 +36,7 @@ _/  |_ _______ |__|  _____           _/ ____\  ______           ____  _/ ____\
 
 ## Software requirements
 
-* Nextflow v23+ (see the dry guide on Nextflow [here](../rockfish/rf-nextflow.md) or the Nextflow documentation [here](https://www.nextflow.io/docs/latest/getstarted.html)). On Rockfish, you can access this version by loading the `nf23_env` conda environment prior to running the pipeline command:
+* Nextflow v23+ (see the dry guide on Nextflow [here](http://andersenlab.org/dry-guide/latest/rockfish/rf-nextflow/) or the Nextflow documentation [here](https://www.nextflow.io/docs/latest/getstarted.html)). On Rockfish, you can access this version by loading the `nf23_env` conda environment prior to running the pipeline command:
 
 ```
 module load python/anaconda
@@ -87,7 +87,7 @@ nextflow run -latest andersenlab/trim-fq-nf --debug
 
 ## Running the pipeline on Rockfish
 
-*Note: if you are having issues running Nextflow or need reminders, check out the [Nextflow](quest-nextflow.md) page.*
+*Note: if you are having issues running Nextflow or need reminders, check out the [Nextflow](http://andersenlab.org/dry-guide/latest/rockfish/rf-nextflow/) page.*
 
 ```
 nextflow run -latest andersenlab/trim-fq-nf --fastq_folder <name_of_folder>
