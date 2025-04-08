@@ -130,15 +130,19 @@ println "Running fastp trimming on ${params.raw_path_final}/${params.fastq_folde
 workflow { 
 
     // create sample sheet
-    Channel.fromPath("${params.raw_path_final}/${params.fastq_folder}").view() | generate_sample_sheet
-    generate_sample_sheet.out.view {"$it"}
+    Channel.fromPath("${params.raw_path_final}/${params.fastq_folder}") | generate_sample_sheet
     
     genome_sheet = Channel.fromPath(params.genome_sheet, checkIfExists: true)
                       .ifEmpty { exit 1, "genome sheet not found" }
                       .splitCsv(header:true, sep: "\t")
-                      .map { it ->  [species: it.species, \
-                                     genome_path: "$params.genome_path/$it.genome".substring(0, "$params.genome_path/$it.genome".lastIndexOf("/")), \
-                                     genome_basename: "$it.genome".substring("$it.genome".lastIndexOf("/") + 1)] }
+    
+    genome_names = genome_sheet
+        .map{ it: it.species }
+        .collect()
+
+    genome_paths = genome_sheet
+        .map{ it: it.genome }
+        .collect()
 
     fq = Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1,2}.fq.gz", flat: true)
                 .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{R1,R2}_*.fastq.gz", flat: true))
@@ -146,13 +150,15 @@ workflow {
 
     // screen species
     if("${params.check_species}" == true) {
-    	fq.combine(genome_sheet)
-        .map { it -> [it[0], it[1], it[2], it[3].species, it[3].genome_path, it[3].genome_basename] } | screen_species
+    	screen_species( fq,
+                        genome_names,
+                        genome_paths,
+                        Channel.fromPath(params.genome_path).first() )
         screen_species.out.collect() | multi_QC_species
 
         // run more species check and generate species-specific sample sheet
         generate_sample_sheet.out
-            .combine(multi_QC_species.out) 
+            .combine(multi_QC_species.out)
             .combine(Channel.fromPath("${workflow.projectDir}/bin/species_check.Rmd")) | species_check
     }
 
@@ -208,33 +214,45 @@ process fastp_trim {
 
 
 process screen_species {
+    array 100
 
     input:
-        tuple val(sampleID), path(fq1), path(fq2), val(species), path(genome), val(basename)
+        tuple val(sampleID), path(fq1), path(fq2)
+        val genome_names
+        val genome_indices
+        path genome_dir
 
     output:
         path("*.stats")
 
     """
-        INDEX=`find -L ${genome} -name "${basename}.amb" | sed 's/\\.amb\$//'`
-        zcat ${fq1} | head -n ${params.subsample_read_count} > subset_R1.fq
-        zcat ${fq2} | head -n ${params.subsample_read_count} > subset_R2.fq
+    NAMES=(`echo "${genome_names}" | sed "s/,//g" | sed "s/\\[//" | sed "s/\\]//"`)
+    INDICES=(`echo "${genome_indices}" | sed "s/,//g" | sed "s/\\[//" | sed "s/\\]//"`)
+    N=\${#NAMES[*]}
+
+    zcat ${fq1} | head -n ${params.subsample_read_count} > subset_R1.fq
+    zcat ${fq2} | head -n ${params.subsample_read_count} > subset_R2.fq
+    
+    for I in \$(seq 0 1 \$(expr \${N} - 1)); do
+        SPECIES=\${NAMES[\${I}]}
+        INDEX=${genome_dir}/\${INDICES[\${I}]}
         bwa mem -t ${task.cpus} \${INDEX} subset_R1.fq subset_R2.fq > out.sam
 
         samtools sort -o sorted.bam out.sam
         samtools index sorted.bam
 
         picard MarkDuplicates I=sorted.bam \\
-                              O=rm_dup.bam \\
-                              M=${sampleID}_xxx_${species}.duplicates.txt \\
-                              VALIDATION_STRINGENCY=LENIENT \\
-                              REMOVE_DUPLICATES=true
+                                O=rm_dup.bam \\
+                                M=${sampleID}_xxx_\${SPECIES}.duplicates.txt \\
+                                VALIDATION_STRINGENCY=LENIENT \\
+                                REMOVE_DUPLICATES=true
 
-        samtools stats rm_dup.bam > ${sampleID}_xxx_${species}.stats
+        samtools stats rm_dup.bam > ${sampleID}_xxx_\${SPECIES}.stats
+    done
 
-        rm *.fq
-        rm *.bam
-        rm *.sam
+    rm *.fq
+    rm *.bam
+    rm *.sam
     """
 }
 
