@@ -149,7 +149,7 @@ workflow {
                 .concat(Channel.fromFilePairs("${params.raw_path_final}/${params.fastq_folder}/*_{1P,2P}.fq.gz", flat: true))
 
     // screen species
-    if("${params.check_species}" == true) {
+    if("${params.check_species}" == "true") {
     	screen_species( fq,
                         genome_names,
                         genome_paths,
@@ -163,7 +163,7 @@ workflow {
     }
 
     // fastp trim
-    if("${params.trim}" == true) {
+    if("${params.trim}" == "true") {
     	fq | fastp_trim
         fastp_trim.out.fastp_json.collect() | multi_QC_trim
     }
