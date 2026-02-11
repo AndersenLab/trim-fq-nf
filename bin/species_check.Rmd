@@ -41,7 +41,7 @@ RET <- stringr::str_split_fixed(fq_folder, "_", 2)[,2]
 
 ```{r}
 ### Load sample sheet and append species. Note the species name should be the same as what the species_check used
-ce_WI <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/10x-CcKNCl80F9hMcrGWC4fhP_cbekSzi5_IYBY2UqCc/edit?usp=sharing") %>%
+ce_WI <- gsheet::gsheet2tbl("https://docs.google.com/spreadsheets/d/1Rts4CZxkDiid3hux7EpE7CBAQfole6oWQs61dorYBX0/edit?usp=sharing") %>%
     dplyr::select(strain) %>%
     dplyr::mutate(species_in_record="c_elegans")
 
